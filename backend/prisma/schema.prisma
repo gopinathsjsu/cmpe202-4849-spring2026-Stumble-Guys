@@ -1,0 +1,205 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String   @id @default(uuid()) @db.Uuid
+  email         String   @unique
+  password_hash String
+  first_name    String
+  last_name     String
+  role          String   @default("attendee")
+  avatar_url    String?
+  phone         String?
+  bio           String?
+  is_verified   Boolean  @default(false)
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  refresh_tokens  RefreshToken[]
+  organized_events Event[]        @relation("OrganizerEvents")
+  approved_events  Event[]        @relation("ApprovedEvents")
+  tickets          Ticket[]
+  rsvps            Rsvp[]
+  notifications    Notification[]
+  saved_events     SavedEvent[]
+  event_views      EventView[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  token      String
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("refresh_tokens")
+}
+
+model Category {
+  id   String  @id @default(uuid()) @db.Uuid
+  name String  @unique
+  slug String  @unique
+  icon String?
+
+  events Event[]
+
+  @@map("categories")
+}
+
+model Event {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizer_id   String    @db.Uuid
+  category_id    String?   @db.Uuid
+  title          String
+  slug           String    @unique
+  description    String
+  short_desc     String?
+  start_date     DateTime
+  end_date       DateTime
+  timezone       String    @default("America/Los_Angeles")
+  venue_name     String?
+  address        String?
+  city           String?
+  state          String?
+  zip_code       String?
+  country        String    @default("US")
+  latitude       Decimal?  @db.Decimal(10, 7)
+  longitude      Decimal?  @db.Decimal(10, 7)
+  is_online      Boolean   @default(false)
+  online_url     String?
+  image_url      String?
+  capacity       Int       @default(100)
+  is_free        Boolean   @default(true)
+  price          Decimal   @default(0) @db.Decimal(10, 2)
+  status         String    @default("draft")
+  approval_notes String?
+  approved_by_id String?   @db.Uuid
+  approved_at    DateTime?
+  tags           String[]
+  schedule       Json?
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+
+  organizer    User      @relation("OrganizerEvents", fields: [organizer_id], references: [id])
+  category     Category? @relation(fields: [category_id], references: [id])
+  approved_by  User?     @relation("ApprovedEvents", fields: [approved_by_id], references: [id])
+  ticket_types TicketType[]
+  tickets      Ticket[]
+  rsvps        Rsvp[]
+  notifications Notification[]
+  saved_events  SavedEvent[]
+  event_views   EventView[]
+
+  @@index([start_date, end_date])
+  @@index([status])
+  @@index([category_id])
+  @@map("events")
+}
+
+model TicketType {
+  id          String   @id @default(uuid()) @db.Uuid
+  event_id    String   @db.Uuid
+  name        String
+  price       Decimal  @default(0) @db.Decimal(10, 2)
+  quantity    Int
+  sold_count  Int      @default(0)
+  description String?
+  created_at  DateTime @default(now())
+
+  event   Event    @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  tickets Ticket[]
+
+  @@map("ticket_types")
+}
+
+model Ticket {
+  id             String   @id @default(uuid()) @db.Uuid
+  ticket_type_id String   @db.Uuid
+  event_id       String   @db.Uuid
+  user_id        String   @db.Uuid
+  ticket_number  String   @unique
+  status         String   @default("confirmed")
+  qr_code        String?
+  purchase_date  DateTime @default(now())
+  amount_paid    Decimal  @default(0) @db.Decimal(10, 2)
+  payment_status String   @default("completed")
+  created_at     DateTime @default(now())
+
+  ticket_type TicketType @relation(fields: [ticket_type_id], references: [id])
+  event       Event      @relation(fields: [event_id], references: [id])
+  user        User       @relation(fields: [user_id], references: [id])
+
+  @@index([user_id])
+  @@map("tickets")
+}
+
+model Rsvp {
+  id         String   @id @default(uuid()) @db.Uuid
+  event_id   String   @db.Uuid
+  user_id    String   @db.Uuid
+  status     String   @default("going")
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  event Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [user_id], references: [id])
+
+  @@unique([event_id, user_id])
+  @@index([event_id])
+  @@map("rsvps")
+}
+
+model Notification {
+  id       String  @id @default(uuid()) @db.Uuid
+  user_id  String  @db.Uuid
+  event_id String? @db.Uuid
+  type     String
+  title    String
+  message  String
+  is_read  Boolean  @default(false)
+  channel  String   @default("in_app")
+  sent_at  DateTime @default(now())
+
+  user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  event Event? @relation(fields: [event_id], references: [id])
+
+  @@index([user_id, is_read])
+  @@map("notifications")
+}
+
+model SavedEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  event_id   String   @db.Uuid
+  created_at DateTime @default(now())
+
+  user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, event_id])
+  @@map("saved_events")
+}
+
+model EventView {
+  id         String   @id @default(uuid()) @db.Uuid
+  event_id   String   @db.Uuid
+  user_id    String?  @db.Uuid
+  ip_address String?
+  viewed_at  DateTime @default(now())
+
+  event Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [user_id], references: [id])
+
+  @@map("event_views")
+}
