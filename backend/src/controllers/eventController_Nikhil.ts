@@ -26,10 +26,13 @@ export async function listEvents(req: Request, res: Response): Promise<void> {
       status: req.query.status as string,
     };
 
-    const result = await EventService.listEvents(filters, page, limit);
+    const safePage = page < 1 ? 1 : page;
+    const safeLimit = limit < 1 ? 10 : limit;
+
+    const result = await EventService.listEvents(filters, safePage, safeLimit);
     successResponse(res, result.data, 'Events retrieved', 200, {
-      page,
-      limit,
+      page: safePage,
+      limit: safeLimit,
       total: result.pagination.total,
       totalPages: result.pagination.totalPages,
     });
