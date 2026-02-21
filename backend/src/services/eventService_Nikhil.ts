@@ -81,6 +81,10 @@ export class EventService {
       where.is_free = filters.is_free;
     }
 
+    if (filters.status) {
+      where.status = filters.status;
+    }
+
     if (filters.search) {
       where.OR = [
         { title: { contains: filters.search, mode: 'insensitive' } },
