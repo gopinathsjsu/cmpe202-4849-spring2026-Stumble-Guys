@@ -836,7 +836,7 @@ async function main() {
 
     await seedTickets(events, users);
 
-    console.log('✅ Database seeding completed successfully!');
+    console.log('✅ Nikhil event data seeding completed successfully!');
   } catch (error) {
     console.error('❌ Seeding failed:', error);
     throw error;
