@@ -76,7 +76,7 @@ const HomePage: React.FC = () => {
   const [searchTerm, setSearchTerm] = React.useState('');
 
   useEffect(() => {
-    fetchEvents({ status: 'approved', limit: 8 });
+    fetchEvents({ status: 'approved', limit: 10 });
     fetchCategories();
     fetchTrending();
   }, [fetchEvents, fetchCategories, fetchTrending]);
