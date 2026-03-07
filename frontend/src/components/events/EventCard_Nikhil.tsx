@@ -59,6 +59,7 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => {
           <img
             src={image_url}
             alt={title}
+            loading="lazy"
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
