@@ -210,7 +210,7 @@ const useEventStore = create<EventState>((set, get) => ({
   },
 
   clearFilters: () => {
-    set({ filters: {}, pagination: { ...defaultPagination } });
+    set({ filters: {}, events: [], pagination: { ...defaultPagination } });
   },
 }));
 
