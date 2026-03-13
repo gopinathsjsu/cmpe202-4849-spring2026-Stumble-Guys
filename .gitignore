@@ -1,0 +1,19 @@
+# ─── Secrets & Environment ────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ─── Dependencies ─────────────────────────────────────────────────────────────
+node_modules/
+
+# ─── Build Output ─────────────────────────────────────────────────────────────
+dist/
+
+# ─── Prisma ───────────────────────────────────────────────────────────────────
+# Keep prisma/migrations/ tracked — teammates need the migration history.
+# Never ignore migrations.
+
+# ─── OS & Editor ──────────────────────────────────────────────────────────────
+.DS_Store
+.vscode/
+*.swp

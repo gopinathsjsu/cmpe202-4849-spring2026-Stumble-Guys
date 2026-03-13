@@ -1,0 +1,307 @@
+SJSU TEAM PROJECT GUIDE (4-PERSON BACKEND WORKFLOW)
+===================================================
+
+2-MINUTE QUICKSTART (FOR TEAMMATES)
+-----------------------------------
+1. Open terminal in project root.
+2. Install dependencies:
+   npm install
+3. Create local env file:
+   cp .env.example .env
+4. Put your own values in .env:
+   - DATABASE_URL (your Neon PostgreSQL/psql connection string)
+   - PSQL_URL (optional, usually same as DATABASE_URL)
+   - JWT_SECRET
+   - PORT=3000
+5. Sync DB schema + Prisma client:
+   npx prisma migrate deploy
+   npx prisma generate
+6. Start backend:
+   npm run dev
+7. Check server:
+   GET http://localhost:3000/health
+
+If npm/npx is missing, follow the "One-time setup for each teammate" section below.
+
+.env example values
+-------------------
+Use this format in local .env (do not commit real secrets):
+
+DATABASE_URL="postgresql://USER:PASSWORD@HOST/DBNAME?sslmode=require&channel_binding=require"
+PSQL_URL="postgresql://USER:PASSWORD@HOST/DBNAME?sslmode=require&channel_binding=require"
+JWT_SECRET="replace_with_a_long_random_secret_at_least_32_chars"
+PORT=3000
+
+Optional psql connection test:
+psql "$PSQL_URL"
+
+Project goal
+------------
+Implement a secure user model and minimal auth API using:
+- Node.js + Express + TypeScript
+- Prisma ORM
+- Neon hosted PostgreSQL
+- bcrypt password hashing
+- JWT login token
+
+
+What is already implemented
+---------------------------
+1) User model with required fields:
+   - id
+   - name
+   - email
+   - passwordHash
+   - role (enum: USER, ADMIN; default USER)
+
+2) Database-level constraints:
+   - email is UNIQUE in PostgreSQL
+   - NOT NULL on required fields
+
+3) API routes:
+   - POST /api/auth/register
+   - POST /api/auth/login
+
+4) Security behavior:
+   - Plain passwords are NEVER stored
+   - Passwords are hashed with bcrypt (12 rounds)
+   - Login compares hash using bcrypt.compare()
+   - JWT token is returned on successful login
+
+5) Validation and error handling:
+   - Zod request validation
+   - Duplicate email -> 409 conflict
+   - Invalid login -> 401
+   - Invalid body -> 400
+   - Unexpected errors -> 500
+
+
+Current file structure
+----------------------
+Project/
+  prisma/
+    schema.prisma
+    migrations/
+      20260313005938_init_user_model/
+        migration.sql
+      migration_lock.toml
+  src/
+    generated/
+      prisma/               (generated Prisma client)
+    lib/
+      auth.ts               (bcrypt + JWT helpers)
+    routes/
+      auth.ts               (register/login endpoints)
+    server.ts               (Express app bootstrap)
+  .env                      (local secrets; DO NOT COMMIT)
+  .env.example              (template; commit this)
+  .gitignore
+  package.json
+  tsconfig.json
+
+
+What technologies/libraries are used and why
+---------------------------------------------
+- express: REST API server
+- prisma + @prisma/client: database schema, migration, typed DB access
+- bcrypt: secure one-way password hashing
+- jsonwebtoken: issue login token (JWT)
+- zod: request body validation
+- ts-node + typescript: TypeScript development/runtime
+- Neon PostgreSQL: hosted cloud database
+
+
+Important implementation details
+--------------------------------
+A) Prisma client output path is customized in prisma/schema.prisma:
+   generator client {
+     provider = "prisma-client-js"
+     output   = "../src/generated/prisma"
+   }
+
+   Why this is done:
+   - Avoids TypeScript import resolution issues seen with @prisma/client re-exports.
+   - Source imports Prisma from src/generated/prisma directly.
+
+B) Auth route imports:
+   src/routes/auth.ts uses:
+   import { PrismaClient, Prisma } from "../generated/prisma";
+
+C) Password handling:
+   - register: password -> hashPassword() -> save hash only
+   - login: verifyPassword(plain, storedHash)
+
+D) Role handling:
+   - role is enum Role { USER, ADMIN }
+   - defaults to USER unless explicitly changed later
+
+
+One-time setup for each teammate
+--------------------------------
+If Node/npm command not found on macOS:
+1. Install nvm:
+   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+
+2. Add nvm to ~/.zshrc:
+   export NVM_DIR="$HOME/.nvm"
+   [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+3. Reload shell:
+   source ~/.zshrc
+
+4. Install Node LTS:
+   nvm install --lts
+   nvm use --lts
+
+Then project setup:
+1. Clone repository
+2. cd to project root
+3. npm install
+4. Copy env template:
+   cp .env.example .env
+5. Fill local .env values (DATABASE_URL, JWT_SECRET, PORT)
+6. Generate Prisma client:
+   npx prisma generate
+
+
+How to run locally
+------------------
+- Start server:
+  npm run dev
+
+- Health check:
+  GET http://localhost:3000/health
+
+
+API examples
+------------
+Register:
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Alice","email":"alice@sjsu.edu","password":"securePass1"}'
+
+Login:
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"alice@sjsu.edu","password":"securePass1"}'
+
+Expected behavior:
+- Register returns user metadata (no password hash in response)
+- Login returns JWT token and user metadata
+
+
+Team workflow rules for a 4-person project
+------------------------------------------
+Recommended role split:
+- Person 1: DB/Migrations owner
+- Person 2: Auth/API owner
+- Person 3: Testing + validation owner
+- Person 4: Integration + docs owner
+
+Migration workflow (IMPORTANT):
+1. Only ONE person (DB owner) runs:
+   npx prisma migrate dev --name <migration_name>
+
+2. DB owner commits BOTH:
+   - prisma/schema.prisma
+   - prisma/migrations/... files
+
+3. Everyone else after git pull runs:
+   - npx prisma migrate deploy
+   - npx prisma generate
+
+Why:
+- Prevent migration history conflicts
+- Keep all teammates on the same DB schema version
+
+
+What to commit / what NOT to commit
+-----------------------------------
+Commit:
+- src/
+- prisma/schema.prisma
+- prisma/migrations/
+- package.json
+- package-lock.json
+- .env.example
+- tsconfig.json
+- .gitignore
+- this TEAM_PROJECT_GUIDE.txt
+
+Do NOT commit:
+- .env (contains secrets)
+- real Neon credentials
+- JWT production secrets
+- node_modules/
+- dist/
+
+
+Neon verification queries (SQL editor)
+--------------------------------------
+Check columns:
+SELECT column_name, data_type, is_nullable, column_default
+FROM information_schema.columns
+WHERE table_name = 'users'
+ORDER BY ordinal_position;
+
+Check unique email index:
+SELECT indexname, indexdef
+FROM pg_indexes
+WHERE tablename = 'users';
+
+Check stored users:
+SELECT id, name, email, role, "createdAt"
+FROM users;
+
+Confirm hashes are bcrypt format:
+SELECT email, LEFT("passwordHash", 7) AS hash_prefix
+FROM users;
+
+
+Common problems and fixes
+-------------------------
+1) "npm: command not found" or "npx: command not found"
+   - Install/use Node via nvm (steps above), then reopen terminal.
+
+2) Prisma import/type errors in auth route
+   - Ensure prisma generate was run.
+   - Ensure import uses ../generated/prisma.
+
+3) "Email already in use"
+   - Expected if same email registers again (unique constraint works).
+
+4) Migration command fails for non-owner teammates
+   - Use migrate deploy, not migrate dev.
+
+5) Invalid token issues later
+   - Verify JWT_SECRET exists and is same while testing in one environment.
+
+
+Security checklist
+------------------
+- Never log plain passwords
+- Never store plain passwords
+- Keep DATABASE_URL and JWT_SECRET out of git
+- Use strong JWT secret (at least 32+ random chars)
+- Keep bcrypt rounds >= 10 (project uses 12)
+
+
+Quick daily commands
+--------------------
+- Install deps (first time / after package changes):
+  npm install
+
+- Generate Prisma client:
+  npx prisma generate
+
+- Apply pulled migrations:
+  npx prisma migrate deploy
+
+- Start dev server:
+  npm run dev
+
+
+End of guide
+------------
+If new backend features are added (profile update, password reset, protected routes),
+update this file so all 4 teammates stay aligned.
