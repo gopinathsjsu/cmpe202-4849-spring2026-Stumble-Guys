@@ -1,0 +1,37 @@
+import React from 'react';
+import type { LucideIcon } from 'lucide-react';
+import Button from './Button_Preetam';
+
+interface EmptyStateProps {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
+}
+
+const EmptyState: React.FC<EmptyStateProps> = ({
+  icon: Icon,
+  title,
+  description,
+  action,
+}) => {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="mb-4 rounded-full bg-gray-100 p-4">
+        <Icon className="h-10 w-10 text-gray-400" />
+      </div>
+      <h3 className="mb-2 text-lg font-semibold text-gray-900">{title}</h3>
+      <p className="mb-6 max-w-sm text-sm text-gray-500">{description}</p>
+      {action && (
+        <Button variant="primary" onClick={action.onClick}>
+          {action.label}
+        </Button>
+      )}
+    </div>
+  );
+};
+
+export default EmptyState;
