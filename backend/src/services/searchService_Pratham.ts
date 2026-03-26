@@ -137,3 +137,5 @@ export class SearchService {
     });
   }
 }
+
+// Trending events support added - Sprint 4
