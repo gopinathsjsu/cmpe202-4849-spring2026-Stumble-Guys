@@ -38,3 +38,5 @@ export async function getTrending(_req: Request, res: Response): Promise<void> {
     errorResponse(res, error.message || 'Failed to get trending events', 'TRENDING_ERROR', error.statusCode || 500);
   }
 }
+
+// View tracking and trending endpoint - Sprint 4
