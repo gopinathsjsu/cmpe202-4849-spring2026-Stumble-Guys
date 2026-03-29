@@ -166,3 +166,5 @@ export class LocationService {
     };
   }
 }
+
+// Map bounds filtering support - Sprint 4
