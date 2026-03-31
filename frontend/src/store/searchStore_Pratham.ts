@@ -129,3 +129,5 @@ const useSearchStore = create<SearchState>((set, get) => ({
 }));
 
 export default useSearchStore;
+
+// Trending events state management - Sprint 4
