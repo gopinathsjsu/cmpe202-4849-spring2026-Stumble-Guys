@@ -1,7 +1,7 @@
 import prisma from '../config/database_Preetam';
 
 export class AdminService {
-  static async getPendingEvents(page: number = 1, limit: number = 10) {
+  static async getPendingEvents(page: number = 1, limit: number = 20) {
     const skip = (page - 1) * limit;
 
     const [events, total] = await Promise.all([
