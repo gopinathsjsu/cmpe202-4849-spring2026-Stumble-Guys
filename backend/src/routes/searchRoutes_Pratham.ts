@@ -8,3 +8,5 @@ const router = Router();
 router.get('/', validate(searchQuerySchema, 'query'), searchController.search);
 
 export default router;
+
+// Trending and view tracking routes - Sprint 4
