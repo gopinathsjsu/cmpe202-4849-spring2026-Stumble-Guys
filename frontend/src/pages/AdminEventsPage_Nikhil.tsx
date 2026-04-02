@@ -62,7 +62,7 @@ const AdminEventsPage: React.FC = () => {
     async (page = 1) => {
       setIsLoading(true);
       try {
-        const params: EventFilters = { status: activeTab, page, limit: 10 };
+        const params: EventFilters = { status: activeTab, page, limit: 20 };
         const response = await eventApi.getPendingEvents(params);
         const data = response.data;
         setEvents(data.events ?? data ?? []);
