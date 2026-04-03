@@ -134,7 +134,7 @@ const EventApprovalCard: React.FC<EventApprovalCardProps> = ({
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add notes (optional for approval, recommended for rejection)..."
+                placeholder="Add review notes (optional for approval, required for rejection)..."
                 rows={2}
                 className="mb-3 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 transition-colors focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
               />
