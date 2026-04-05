@@ -153,6 +153,7 @@ const EventDetailPage: React.FC = () => {
       {/* Back */}
       <button
         onClick={() => navigate(-1)}
+        aria-label="Go back"
         className="mb-6 flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
       >
         <ChevronLeft className="h-4 w-4" />
