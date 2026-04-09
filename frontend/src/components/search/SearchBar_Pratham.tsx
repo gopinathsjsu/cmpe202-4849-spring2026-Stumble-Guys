@@ -138,3 +138,5 @@ const SearchBar: React.FC<SearchBarProps> = ({
 };
 
 export default SearchBar;
+
+// Accessibility: aria-labels and keyboard navigation - Sprint 5
