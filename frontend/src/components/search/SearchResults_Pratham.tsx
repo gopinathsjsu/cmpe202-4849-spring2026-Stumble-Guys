@@ -285,3 +285,5 @@ const SearchResults: React.FC<SearchResultsProps> = ({
 };
 
 export default SearchResults;
+
+// Enhanced loading states and skeleton UI - Sprint 5
