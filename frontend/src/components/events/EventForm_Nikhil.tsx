@@ -119,7 +119,7 @@ const EventForm: React.FC<EventFormProps> = ({
       tags: '',
       start_date: '',
       end_date: '',
-      timezone: 'America/New_York',
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
       is_online: false,
       venue_name: '',
       address: '',
