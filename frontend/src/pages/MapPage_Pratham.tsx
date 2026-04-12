@@ -237,3 +237,5 @@ const MapPage: React.FC = () => {
 };
 
 export default MapPage;
+
+// Error boundary wrapper for map rendering failures - Sprint 5
