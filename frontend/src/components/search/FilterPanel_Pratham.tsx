@@ -230,3 +230,5 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
 };
 
 export default FilterPanel;
+
+// Accessibility: focus management and screen reader support - Sprint 5
