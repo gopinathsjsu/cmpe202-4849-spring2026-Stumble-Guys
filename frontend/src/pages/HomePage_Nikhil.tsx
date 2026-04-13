@@ -147,6 +147,7 @@ const HomePage: React.FC = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search events, categories, or cities..."
+                  aria-label="Search events"
                   className="w-full py-4 text-sm text-gray-900 placeholder-gray-400 focus:outline-none"
                 />
               </div>
