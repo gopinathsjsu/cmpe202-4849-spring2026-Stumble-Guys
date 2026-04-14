@@ -184,3 +184,5 @@ const SearchPage: React.FC = () => {
 };
 
 export default SearchPage;
+
+// Error boundary and cross-browser input fixes - Sprint 5
