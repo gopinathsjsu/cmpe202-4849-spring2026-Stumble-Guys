@@ -67,6 +67,7 @@ const Sidebar: React.FC<SidebarProps> = ({ items }) => {
       <div className="border-t p-3">
         <button
           onClick={() => setCollapsed((v) => !v)}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           className="flex w-full items-center justify-center rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
         >
           {collapsed ? (
