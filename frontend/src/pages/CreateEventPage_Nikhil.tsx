@@ -33,8 +33,8 @@ const CreateEventPage: React.FC = () => {
             Create New Event
           </h1>
           <p className="mt-2 text-sm text-gray-500">
-            Fill out the details below to publish your event and start selling
-            tickets.
+            Fill out the details below to create your event. Once submitted,
+            it will be reviewed by an admin before going live.
           </p>
         </div>
 
