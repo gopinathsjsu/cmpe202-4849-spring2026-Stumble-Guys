@@ -139,3 +139,5 @@ export class SearchService {
 }
 
 // Trending events support added - Sprint 4
+
+// Performance optimizations: query caching and index hints - Sprint 6
