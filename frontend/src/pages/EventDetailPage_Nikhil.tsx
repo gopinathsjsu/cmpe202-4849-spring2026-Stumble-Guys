@@ -340,7 +340,7 @@ const EventDetailPage: React.FC = () => {
 
           {/* Description */}
           <div className="mt-10">
-            <h2 className="mb-4 text-xl font-bold text-gray-900">
+            <h2 className="mb-4 text-xl font-bold text-gray-900" id="about">
               About This Event
             </h2>
             <div className="prose prose-sm max-w-none text-gray-600">
