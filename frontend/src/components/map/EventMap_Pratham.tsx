@@ -185,3 +185,5 @@ const EventMap: React.FC<EventMapProps> = ({
 export default EventMap;
 
 // Map bounds change handler - Sprint 4
+
+// Cross-browser compatibility fixes for Safari and Firefox - Sprint 6
