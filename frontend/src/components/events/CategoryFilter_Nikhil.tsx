@@ -74,6 +74,8 @@ const CategoryFilter: React.FC<CategoryFilterProps> = ({
       <div
         ref={scrollRef}
         className="scrollbar-hide flex gap-2 overflow-x-auto px-1 py-1"
+        role="tablist"
+        aria-label="Event categories"
       >
         <button
           type="button"
