@@ -6,16 +6,20 @@ import EventForm from '../components/events/EventForm_Nikhil';
 import RoleGuard from '../components/auth/RoleGuard_Preetam';
 import { useToast } from '../components/shared/Toast_Sasi';
 import { ROLES } from '../utils/constants_Preetam';
+import { mapEventFormToApiPayload } from '../utils/mapEventFormToApi_Nikhil';
 
 const CreateEventPage: React.FC = () => {
   const navigate = useNavigate();
   const { createEvent, isLoading } = useEventStore();
   const { toast } = useToast();
 
-  const handleSubmit = async (data: Parameters<typeof createEvent>[0]) => {
+  const handleSubmit = async (
+    formData: Parameters<typeof mapEventFormToApiPayload>[0]
+  ) => {
     try {
-      const newEvent = await createEvent(data);
-      toast.success('Event created successfully!');
+      const payload = mapEventFormToApiPayload(formData);
+      const newEvent = await createEvent(payload);
+      toast.success('Event created and sent for admin review.');
       navigate(`/events/${newEvent.slug}`);
     } catch {
       toast.error('Failed to create event. Please try again.');
@@ -33,8 +37,8 @@ const CreateEventPage: React.FC = () => {
             Create New Event
           </h1>
           <p className="mt-2 text-sm text-gray-500">
-            Fill out the details below to create your event. Once submitted,
-            it will be reviewed by an admin before going live.
+            After you create an event, it is sent to admins for review. Once
+            approved, it appears in public listings and you can sell tickets.
           </p>
         </div>
 

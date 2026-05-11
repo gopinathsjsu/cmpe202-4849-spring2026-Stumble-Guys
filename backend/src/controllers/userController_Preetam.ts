@@ -7,8 +7,9 @@ export async function listUsers(req: Request, res: Response): Promise<void> {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const search = (req.query.search as string) || undefined;
+    const role = (req.query.role as string) || undefined;
 
-    const result = await UserService.listUsers(page, limit, search);
+    const result = await UserService.listUsers(page, limit, search, role);
     successResponse(res, result.data, 'Users retrieved', 200, {
       page,
       limit,
@@ -39,5 +40,16 @@ export async function updateUserStatus(req: Request, res: Response): Promise<voi
     successResponse(res, result, 'User status updated');
   } catch (error: any) {
     errorResponse(res, error.message || 'Failed to update user status', 'STATUS_UPDATE_ERROR', error.statusCode || 500);
+  }
+}
+
+export async function deleteUser(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+    const { userId } = req.user!;
+    const result = await UserService.deleteUser(id, userId);
+    successResponse(res, result, 'User deleted');
+  } catch (error: any) {
+    errorResponse(res, error.message || 'Failed to delete user', 'DELETE_USER_ERROR', error.statusCode || 500);
   }
 }

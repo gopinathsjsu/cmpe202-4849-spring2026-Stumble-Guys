@@ -17,7 +17,7 @@ const sizeStyles: Record<ModalSize, string> = {
   sm: 'max-w-sm',
   md: 'max-w-md',
   lg: 'max-w-lg',
-  xl: 'max-w-xl',
+  xl: 'max-w-4xl',
 };
 
 const Modal: React.FC<ModalProps> = ({
@@ -48,21 +48,25 @@ const Modal: React.FC<ModalProps> = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto p-4 sm:items-center sm:p-6">
       <div
         className="fixed inset-0 bg-black/50 transition-opacity"
         onClick={onClose}
+        aria-hidden
       />
       <div
         className={cn(
-          'relative z-10 w-full rounded-xl bg-white shadow-2xl transition-all',
+          'relative z-10 flex max-h-[min(90dvh,calc(100vh-2rem))] w-full flex-col rounded-xl bg-white shadow-2xl transition-all',
           sizeStyles[size]
         )}
+        role="dialog"
+        aria-modal="true"
       >
         {title && (
-          <div className="flex items-center justify-between border-b px-6 py-4">
-            <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+          <div className="flex shrink-0 items-center justify-between border-b px-6 py-4">
+            <h2 className="pr-8 text-lg font-semibold text-gray-900">{title}</h2>
             <button
+              type="button"
               onClick={onClose}
               className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
             >
@@ -72,13 +76,14 @@ const Modal: React.FC<ModalProps> = ({
         )}
         {!title && (
           <button
+            type="button"
             onClick={onClose}
-            className="absolute right-4 top-4 rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            className="absolute right-4 top-4 z-10 rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
           >
             <X className="h-5 w-5" />
           </button>
         )}
-        <div className="px-6 py-4">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">{children}</div>
       </div>
     </div>,
     document.body

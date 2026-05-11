@@ -25,7 +25,12 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage_Preetam'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard_Preetam'));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage_Preetam'));
 const AdminEventsPage = lazy(() => import('./pages/AdminEventsPage_Nikhil'));
+const AdminCategoriesPage = lazy(() => import('./pages/AdminCategoriesPage_Nikhil'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage_Pratham'));
+const OrganizerDashboardPage = lazy(() => import('./pages/OrganizerDashboardPage'));
+const OrganizerRsvpQueuePage = lazy(() => import('./pages/OrganizerRsvpQueuePage'));
+const OrganizerGuestlistPage = lazy(() => import('./pages/OrganizerGuestlistPage'));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage_Sasi'));
 
 function PageLoader() {
   return (
@@ -51,12 +56,19 @@ const App: React.FC = () => {
 
           {/* Authenticated routes */}
           <Route element={<ProtectedRoute />}>
-            <Route path="events/:id/purchase" element={<TicketPurchasePage />} />
-            <Route path="events/:id/edit" element={<EditEventPage />} />
-            <Route path="my-tickets" element={<MyTicketsPage />} />
-            <Route path="tickets/:id" element={<TicketDetailPage />} />
-            <Route path="calendar" element={<CalendarPage />} />
-            <Route path="saved" element={<SavedEventsPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
+            <Route
+              element={<RoleGuard allowedRoles={[ROLES.ATTENDEE, ROLES.ADMIN]} />}
+            >
+              <Route path="events/:slug/purchase" element={<TicketPurchasePage />} />
+              <Route path="my-tickets" element={<MyTicketsPage />} />
+              <Route path="tickets/:id" element={<TicketDetailPage />} />
+              <Route path="calendar" element={<CalendarPage />} />
+              <Route path="saved" element={<SavedEventsPage />} />
+            </Route>
+            <Route element={<RoleGuard allowedRoles={[ROLES.ADMIN]} />}>
+              <Route path="events/:slug/edit" element={<EditEventPage />} />
+            </Route>
             <Route path="profile" element={<ProfilePage />} />
 
             {/* Organizer / Admin routes */}
@@ -65,6 +77,12 @@ const App: React.FC = () => {
                 <RoleGuard allowedRoles={[ROLES.ORGANIZER, ROLES.ADMIN]} />
               }
             >
+              <Route path="organizer" element={<OrganizerDashboardPage />} />
+              <Route path="organizer/rsvps" element={<OrganizerRsvpQueuePage />} />
+              <Route
+                path="organizer/events/:eventId/guestlist"
+                element={<OrganizerGuestlistPage />}
+              />
               <Route path="events/create" element={<CreateEventPage />} />
               <Route path="my-events" element={<MyEventsPage />} />
             </Route>
@@ -76,6 +94,7 @@ const App: React.FC = () => {
               <Route path="admin" element={<AdminDashboard />} />
               <Route path="admin/users" element={<AdminUsersPage />} />
               <Route path="admin/events" element={<AdminEventsPage />} />
+              <Route path="admin/categories" element={<AdminCategoriesPage />} />
             </Route>
           </Route>
 

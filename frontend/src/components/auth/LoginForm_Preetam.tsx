@@ -8,6 +8,8 @@ import Input from '../shared/Input_Preetam';
 import Button from '../shared/Button_Preetam';
 import { useAuth } from '../../hooks/useAuth_Preetam';
 import { useToast } from '../shared/Toast_Sasi';
+import { ROLES } from '../../utils/constants_Preetam';
+import useAuthStore from '../../store/authStore_Preetam';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -36,7 +38,21 @@ const LoginForm: React.FC = () => {
     try {
       await login(data.email, data.password);
       toast.success('Logged in successfully!');
-      navigate(from, { replace: true });
+      const role = (useAuthStore.getState().user?.role ?? '') as string;
+      const returnTo = from && from !== '/' ? from : null;
+
+      if (returnTo) {
+        navigate(returnTo, { replace: true });
+        return;
+      }
+
+      if (role === ROLES.ADMIN) {
+        navigate('/admin', { replace: true });
+      } else if (role === ROLES.ORGANIZER) {
+        navigate('/organizer', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data
@@ -55,7 +71,7 @@ const LoginForm: React.FC = () => {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
           <Input
             label="Email"
             type="email"
@@ -73,15 +89,6 @@ const LoginForm: React.FC = () => {
             error={errors.password?.message}
             {...register('password')}
           />
-
-          <div className="flex items-center justify-end">
-            <Link
-              to="/forgot-password"
-              className="text-sm font-medium text-orange-600 hover:text-orange-500"
-            >
-              Forgot password?
-            </Link>
-          </div>
 
           <Button
             type="submit"

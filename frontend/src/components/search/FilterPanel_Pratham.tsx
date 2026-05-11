@@ -2,17 +2,17 @@ import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, SlidersHorizontal, X } from 'lucide-react';
 import { cn } from '../../utils/cn_Pratham';
 
-interface Filters {
-  category: string;
+export interface BrowsePanelFilters {
+  categoryIds: string[];
   dateRange: { start: string; end: string };
   isFree: 'all' | 'free' | 'paid';
   city: string;
 }
 
 interface FilterPanelProps {
-  filters: Filters;
-  categories: string[];
-  onFilterChange: (filters: Filters) => void;
+  filters: BrowsePanelFilters;
+  categories: { id: string; name: string }[];
+  onFilterChange: (filters: BrowsePanelFilters) => void;
   className?: string;
 }
 
@@ -53,13 +53,20 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
 }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const update = (patch: Partial<Filters>) => {
+  const update = (patch: Partial<BrowsePanelFilters>) => {
     onFilterChange({ ...filters, ...patch });
+  };
+
+  const toggleCategoryId = (id: string) => {
+    const set = new Set(filters.categoryIds);
+    if (set.has(id)) set.delete(id);
+    else set.add(id);
+    update({ categoryIds: [...set] });
   };
 
   const handleClear = () => {
     onFilterChange({
-      category: '',
+      categoryIds: [],
       dateRange: { start: '', end: '' },
       isFree: 'all',
       city: '',
@@ -67,7 +74,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
   };
 
   const hasActiveFilters =
-    filters.category !== '' ||
+    filters.categoryIds.length > 0 ||
     filters.dateRange.start !== '' ||
     filters.dateRange.end !== '' ||
     filters.isFree !== 'all' ||
@@ -82,8 +89,9 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
         </div>
         {hasActiveFilters && (
           <button
+            type="button"
             onClick={handleClear}
-            className="text-xs font-medium text-orange-500 hover:text-orange-600 transition-colors"
+            className="text-xs font-medium text-orange-500 transition-colors hover:text-orange-600"
           >
             Clear all
           </button>
@@ -91,32 +99,26 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
       </div>
 
       <Section title="Category">
+        <p className="mb-2 text-xs text-gray-500">Select one or more</p>
         <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => update({ category: '' })}
-            className={cn(
-              'rounded-full px-3 py-1 text-xs font-medium transition-colors',
-              filters.category === ''
-                ? 'bg-orange-500 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            )}
-          >
-            All
-          </button>
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => update({ category: cat })}
-              className={cn(
-                'rounded-full px-3 py-1 text-xs font-medium transition-colors',
-                filters.category === cat
-                  ? 'bg-orange-500 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              )}
-            >
-              {cat}
-            </button>
-          ))}
+          {categories.map((cat) => {
+            const active = filters.categoryIds.includes(cat.id);
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => toggleCategoryId(cat.id)}
+                className={cn(
+                  'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                  active
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                )}
+              >
+                {cat.name}
+              </button>
+            );
+          })}
         </div>
       </Section>
 
@@ -152,6 +154,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
           {(['all', 'free', 'paid'] as const).map((option) => (
             <button
               key={option}
+              type="button"
               onClick={() => update({ isFree: option })}
               className={cn(
                 'flex-1 rounded-lg py-1.5 text-xs font-medium transition-colors',
@@ -160,7 +163,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               )}
             >
-              {option === 'all' ? 'All' : option === 'free' ? 'Free' : 'Paid'}
+              {option === 'all' ? 'All Prices' : option === 'free' ? 'Free Only' : 'Paid Only'}
             </button>
           ))}
         </div>
@@ -180,8 +183,8 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
 
   return (
     <>
-      {/* Mobile toggle */}
       <button
+        type="button"
         onClick={() => setMobileOpen(true)}
         className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 lg:hidden"
       >
@@ -194,17 +197,18 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
         )}
       </button>
 
-      {/* Mobile drawer */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div
             className="absolute inset-0 bg-black/40"
             onClick={() => setMobileOpen(false)}
+            aria-hidden
           />
           <div className="absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl animate-in slide-in-from-bottom">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-base font-bold text-gray-900">Filters</h3>
               <button
+                type="button"
                 onClick={() => setMobileOpen(false)}
                 className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
               >
@@ -216,7 +220,6 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
         </div>
       )}
 
-      {/* Desktop sidebar */}
       <aside
         className={cn(
           'hidden w-64 shrink-0 rounded-xl border border-gray-100 bg-white p-5 shadow-sm lg:block',
@@ -230,5 +233,3 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
 };
 
 export default FilterPanel;
-
-// Accessibility: focus management and screen reader support - Sprint 5

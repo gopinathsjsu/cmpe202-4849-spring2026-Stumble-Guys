@@ -5,9 +5,6 @@ import {
   Clock,
   MapPin,
   Globe,
-  Share2,
-  Bookmark,
-  BookmarkCheck,
   ExternalLink,
   Users,
   Tag,
@@ -15,7 +12,6 @@ import {
   Heart,
 } from 'lucide-react';
 import useEventStore, { type EventType } from '../store/eventStore_Nikhil';
-import useSearchStore from '../store/searchStore_Pratham';
 import { useTicketTypes } from '../hooks/useTickets_Sasi';
 import { useAuth } from '../hooks/useAuth_Preetam';
 import { formatDate, formatDateTime, formatDateRange } from '../utils/formatDate_Sasi';
@@ -25,9 +21,15 @@ import { EVENT_STATUS } from '../utils/constants_Preetam';
 import LoadingSpinner from '../components/shared/LoadingSpinner_Pratham';
 import Button from '../components/shared/Button_Preetam';
 import EventSchedule from '../components/events/EventSchedule_Nikhil';
-import TicketSelector from '../components/tickets/TicketSelector_Sasi';
+import TicketSelector, {
+  type TicketCartLine,
+} from '../components/tickets/TicketSelector_Sasi';
 import RSVPButton from '../components/tickets/RSVPButton_Sasi';
+import OrganizerRsvpPanel from '../components/tickets/OrganizerRsvpPanel_Sasi';
+import { ticketApi } from '../api/ticketApi_Sasi';
+import { eventApi } from '../api/eventApi_Nikhil';
 import EventMap from '../components/map/EventMap_Pratham';
+import GoogleCalendarActions from '../components/calendar/GoogleCalendarActions_Preetam';
 import EventGrid from '../components/events/EventGrid_Nikhil';
 import { useToast } from '../components/shared/Toast_Sasi';
 
@@ -44,23 +46,56 @@ const EventDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isOrganizer } = useAuth();
 
   const { currentEvent, isLoading, fetchEventBySlug, events, fetchEvents } =
     useEventStore();
-  const { saveEvent, unsaveEvent } = useSearchStore();
   const { ticketTypes, isLoading: ticketsLoading } = useTicketTypes(
     currentEvent?.id ?? ''
   );
 
-  const [isSaved, setIsSaved] = useState(false);
   const [rsvpStatus, setRsvpStatus] = useState<
     'going' | 'maybe' | 'not_going' | null
   >(null);
+  const [rsvpApprovalStatus, setRsvpApprovalStatus] = useState<string | null>(
+    null
+  );
+
+  const [updates, setUpdates] = useState<
+    Array<{
+      id: string;
+      message: string;
+      created_at: string;
+      author?: { first_name: string; last_name: string; role: string };
+    }>
+  >([]);
+  const [updatesLoading, setUpdatesLoading] = useState(false);
+  const [newUpdate, setNewUpdate] = useState('');
 
   useEffect(() => {
     if (slug) fetchEventBySlug(slug);
   }, [slug, fetchEventBySlug]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadUpdates() {
+      if (!currentEvent?.id) return;
+      setUpdatesLoading(true);
+      try {
+        const res = await eventApi.getEventUpdates(currentEvent.id);
+        const rows = (res?.data ?? []) as typeof updates;
+        if (!cancelled) setUpdates(rows);
+      } catch {
+        if (!cancelled) setUpdates([]);
+      } finally {
+        if (!cancelled) setUpdatesLoading(false);
+      }
+    }
+    loadUpdates();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentEvent?.id]);
 
   useEffect(() => {
     if (currentEvent?.category_id) {
@@ -72,49 +107,90 @@ const EventDetailPage: React.FC = () => {
     }
   }, [currentEvent?.category_id, fetchEvents]);
 
-  const handleSave = async () => {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-    try {
-      if (isSaved) {
-        await unsaveEvent(currentEvent!.id);
-        setIsSaved(false);
-        toast.success('Event removed from saved');
-      } else {
-        await saveEvent(currentEvent!.id);
-        setIsSaved(true);
-        toast.success('Event saved');
+  useEffect(() => {
+    let cancelled = false;
+    async function loadRsvp() {
+      if (
+        !isAuthenticated ||
+        isOrganizer ||
+        !currentEvent?.id ||
+        !currentEvent.is_free
+      ) {
+        if (!cancelled) {
+          setRsvpStatus(null);
+          setRsvpApprovalStatus(null);
+        }
+        return;
       }
-    } catch {
-      toast.error('Failed to update saved status');
+      try {
+        const res = await ticketApi.getMyRsvpForEvent(currentEvent.id);
+        const row = res.data as {
+          status?: string;
+          approval_status?: string;
+        } | null;
+        if (cancelled) return;
+        if (row?.status === 'going' || row?.status === 'maybe' || row?.status === 'not_going') {
+          setRsvpStatus(row.status);
+          setRsvpApprovalStatus(row.approval_status ?? null);
+        } else {
+          setRsvpStatus(null);
+          setRsvpApprovalStatus(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setRsvpStatus(null);
+          setRsvpApprovalStatus(null);
+        }
+      }
     }
-  };
+    loadRsvp();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, isOrganizer, currentEvent?.id, currentEvent?.is_free]);
 
-  const handleShare = async () => {
-    const url = window.location.href;
-    if (navigator.share) {
-      await navigator.share({
-        title: currentEvent?.title,
-        url,
-      });
-    } else {
-      await navigator.clipboard.writeText(url);
-      toast.success('Link copied to clipboard');
-    }
-  };
-
-  const handleTicketSelect = (typeId: string, quantity: number) => {
+  const handleTicketCheckout = (lines: TicketCartLine[]) => {
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
-    toast.success(`${quantity} ticket(s) added`);
+    if (!currentEvent?.slug) return;
+    navigate(`/events/${currentEvent.slug}/purchase`, { state: { cart: lines } });
   };
 
-  const handleRsvpChange = (_eventId: string, status: string | null) => {
-    setRsvpStatus(status as typeof rsvpStatus);
+  const handleRsvpChange = async (_eventId: string, status: string | null) => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    if (!currentEvent?.id) return;
+    try {
+      if (status === null) {
+        await ticketApi.removeRsvp(currentEvent.id);
+        setRsvpStatus(null);
+        setRsvpApprovalStatus(null);
+        toast.success('RSVP removed');
+        return;
+      }
+      const res = rsvpStatus
+        ? await ticketApi.updateRsvp(currentEvent.id, status)
+        : await ticketApi.createRsvp(currentEvent.id, status);
+      const row = res.data as { approval_status?: string } | undefined;
+      setRsvpStatus(status as typeof rsvpStatus);
+      setRsvpApprovalStatus(row?.approval_status ?? null);
+      if (status === 'going') {
+        toast.success(
+          row?.approval_status === 'pending'
+            ? 'RSVP saved — pending organizer approval'
+            : 'RSVP saved'
+        );
+      } else {
+        toast.success('RSVP saved');
+      }
+      if (slug) fetchEventBySlug(slug);
+    } catch {
+      toast.error('Could not update RSVP');
+    }
   };
 
   if (isLoading || !currentEvent) {
@@ -124,6 +200,16 @@ const EventDetailPage: React.FC = () => {
   const event = currentEvent;
   const isOwner = user?.id === event.organizer_id;
   const hasLocation = event.latitude && event.longitude;
+  const eventImage = event.image_url ?? event.cover_image;
+  const eventPrice = Number(event.price ?? 0);
+  const isOnline = event.is_online ?? event.is_virtual;
+  const isConfirmedAttendee =
+    !isOrganizer &&
+    isAuthenticated &&
+    (event.is_free
+      ? rsvpStatus === 'going' &&
+        (rsvpApprovalStatus === 'approved' || rsvpApprovalStatus === 'not_required')
+      : true);
 
   const similarEvents = events
     .filter((e) => e.id !== event.id)
@@ -137,8 +223,9 @@ const EventDetailPage: React.FC = () => {
       venue_name: e.venue_name ?? undefined,
       city: e.city ?? undefined,
       is_free: e.is_free,
-      image_url: e.cover_image ?? undefined,
-      is_online: e.is_virtual,
+      price: Number(e.price ?? 0),
+      image_url: e.image_url ?? e.cover_image ?? undefined,
+      is_online: e.is_online ?? e.is_virtual,
       category: e.category ? { id: e.category.id, name: e.category.name } : undefined,
       organizer: {
         id: e.organizer?.id ?? e.organizer_id,
@@ -153,7 +240,6 @@ const EventDetailPage: React.FC = () => {
       {/* Back */}
       <button
         onClick={() => navigate(-1)}
-        aria-label="Go back"
         className="mb-6 flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
       >
         <ChevronLeft className="h-4 w-4" />
@@ -165,9 +251,9 @@ const EventDetailPage: React.FC = () => {
         <div className="min-w-0 flex-1">
           {/* Hero image */}
           <div className="relative aspect-[16/9] overflow-hidden rounded-2xl">
-            {event.cover_image ? (
+            {eventImage ? (
               <img
-                src={event.cover_image}
+                src={eventImage}
                 alt={event.title}
                 className="h-full w-full object-cover"
               />
@@ -200,7 +286,7 @@ const EventDetailPage: React.FC = () => {
                 <span className="text-green-600">Free</span>
               ) : (
                 <span className="text-gray-900">
-                  {formatPrice(0, event.is_free)}
+                  {formatPrice(eventPrice, event.is_free)}
                 </span>
               )}
             </div>
@@ -210,37 +296,7 @@ const EventDetailPage: React.FC = () => {
           <div className="mt-6 flex flex-wrap items-start justify-between gap-4">
             <h1 className="text-3xl font-bold text-gray-900">{event.title}</h1>
             <div className="flex gap-2">
-              <button
-                onClick={handleSave}
-                className={cn(
-                  'flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium transition-colors',
-                  isSaved
-                    ? 'border-orange-200 bg-orange-50 text-orange-600'
-                    : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                )}
-              >
-                {isSaved ? (
-                  <BookmarkCheck className="h-4 w-4" />
-                ) : (
-                  <Bookmark className="h-4 w-4" />
-                )}
-                {isSaved ? 'Saved' : 'Save'}
-              </button>
-              <button
-                onClick={handleShare}
-                className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
-              >
-                <Share2 className="h-4 w-4" />
-                Share
-              </button>
-              {isOwner && (
-                <Link
-                  to={`/events/${event.id}/edit`}
-                  className="flex items-center gap-1.5 rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-600"
-                >
-                  Edit Event
-                </Link>
-              )}
+              {/* Organizer editing disabled. Admin edit stays accessible via admin-only route. */}
             </div>
           </div>
 
@@ -265,21 +321,21 @@ const EventDetailPage: React.FC = () => {
             {/* Location */}
             <div className="flex gap-4 rounded-xl border border-gray-100 bg-white p-5">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50">
-                {event.is_virtual ? (
+                {isOnline ? (
                   <Globe className="h-6 w-6 text-blue-500" />
                 ) : (
                   <MapPin className="h-6 w-6 text-blue-500" />
                 )}
               </div>
               <div>
-                {event.is_virtual ? (
+                {isOnline ? (
                   <>
                     <p className="text-sm font-semibold text-gray-900">
                       Online Event
                     </p>
-                    {event.virtual_url && (
+                    {(event.online_url ?? event.virtual_url) && (
                       <a
-                        href={event.virtual_url}
+                        href={event.online_url ?? event.virtual_url ?? undefined}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="mt-0.5 flex items-center gap-1 text-sm text-blue-500 hover:text-blue-600"
@@ -310,14 +366,25 @@ const EventDetailPage: React.FC = () => {
                   <Users className="h-6 w-6 text-purple-500" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-900">
-                    {event._count.tickets + event._count.rsvps} Attending
-                  </p>
-                  {event.max_attendees && (
-                    <p className="mt-0.5 text-sm text-gray-500">
-                      {event.max_attendees} max capacity
-                    </p>
-                  )}
+                  {(() => {
+                    const booked = event._count.tickets + event._count.rsvps;
+                    const capacity = event.capacity ?? event.max_attendees ?? null;
+                    const spotsLeft = capacity != null ? Math.max(0, capacity - booked) : null;
+
+                    return (
+                      <>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {booked} booked
+                          {spotsLeft != null ? ` • ${spotsLeft} spots left` : ''}
+                        </p>
+                        {capacity != null && (
+                          <p className="mt-0.5 text-sm text-gray-500">
+                            Capacity: {capacity}
+                          </p>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -338,12 +405,98 @@ const EventDetailPage: React.FC = () => {
             )}
           </div>
 
+          {isOwner &&
+            event.is_free &&
+            event.status === EVENT_STATUS.APPROVED && (
+              <OrganizerRsvpPanel
+                eventId={event.id}
+                onModerated={() => slug && fetchEventBySlug(slug)}
+              />
+            )}
+
+          {/* Updates */}
+          <div className="mt-10">
+            <h2 className="mb-4 text-xl font-bold text-gray-900">Updates</h2>
+
+            {isOwner && (
+              <div className="mb-4 rounded-xl border border-gray-200 bg-white p-4">
+                <label className="mb-2 block text-sm font-semibold text-gray-900">
+                  Post an update for attendees
+                </label>
+                <textarea
+                  value={newUpdate}
+                  onChange={(e) => setNewUpdate(e.target.value)}
+                  rows={3}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                  placeholder="Share important info (schedule change, parking, instructions, etc.)"
+                />
+                <div className="mt-3 flex justify-end">
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      const msg = newUpdate.trim();
+                      if (!msg) return;
+                      try {
+                        await eventApi.createEventUpdate(event.id, msg);
+                        setNewUpdate('');
+                        const res = await eventApi.getEventUpdates(event.id);
+                        setUpdates((res?.data ?? []) as typeof updates);
+                        toast.success('Update posted');
+                      } catch {
+                        toast.error('Failed to post update');
+                      }
+                    }}
+                  >
+                    Post update
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {!isOwner && !isConfirmedAttendee ? (
+              <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
+                Updates are visible only to confirmed attendees.
+              </div>
+            ) : updatesLoading ? (
+              <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
+                Loading updates…
+              </div>
+            ) : updates.length === 0 ? (
+              <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
+                No updates yet.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {updates.map((u) => (
+                  <div
+                    key={u.id}
+                    className="rounded-xl border border-gray-200 bg-white p-4"
+                  >
+                    <div className="mb-1 flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-gray-900">
+                        {u.author
+                          ? `${u.author.first_name} ${u.author.last_name}`.trim()
+                          : 'Organizer'}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(u.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                    <p className="whitespace-pre-wrap text-sm text-gray-700">
+                      {u.message}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Description */}
           <div className="mt-10">
-            <h2 className="mb-4 text-xl font-bold text-gray-900" id="about">
+            <h2 className="mb-4 text-xl font-bold text-gray-900">
               About This Event
             </h2>
-            <div className="prose prose-sm max-w-none text-gray-600">
+            <div className="prose prose-sm max-w-full overflow-hidden break-words text-gray-600">
               {event.description.split('\n').map((p, i) => (
                 <p key={i}>{p}</p>
               ))}
@@ -351,7 +504,7 @@ const EventDetailPage: React.FC = () => {
           </div>
 
           {/* Map */}
-          {!event.is_virtual && hasLocation && (
+          {!isOnline && hasLocation && (
             <div className="mt-10">
               <h2 className="mb-4 text-xl font-bold text-gray-900">
                 Location
@@ -363,15 +516,15 @@ const EventDetailPage: React.FC = () => {
                       id: event.id,
                       slug: event.slug || '',
                       title: event.title,
-                      latitude: event.latitude!,
-                      longitude: event.longitude!,
+                      latitude: Number(event.latitude),
+                      longitude: Number(event.longitude),
                       start_date: event.start_date,
                       venue_name: event.venue_name || '',
                       is_free: event.is_free,
-                      price: 0,
+                      price: eventPrice,
                     },
                   ]}
-                  center={[event.latitude!, event.longitude!]}
+                  center={[Number(event.latitude), Number(event.longitude)]}
                   zoom={15}
                 />
               </div>
@@ -428,7 +581,7 @@ const EventDetailPage: React.FC = () => {
         <aside className="w-full shrink-0 lg:w-96">
           <div className="sticky top-24 space-y-6">
             {/* Ticket Section */}
-            {event.status === EVENT_STATUS.APPROVED && (
+            {event.status === EVENT_STATUS.APPROVED && !isOrganizer && (
               <>
                 {event.is_free ? (
                   <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -439,6 +592,7 @@ const EventDetailPage: React.FC = () => {
                     <RSVPButton
                       eventId={event.id}
                       currentStatus={rsvpStatus}
+                      approvalStatus={rsvpApprovalStatus}
                       onStatusChange={handleRsvpChange}
                     />
                   </div>
@@ -446,12 +600,42 @@ const EventDetailPage: React.FC = () => {
                   !ticketsLoading &&
                   ticketTypes.length > 0 && (
                     <TicketSelector
-                      ticketTypes={ticketTypes}
-                      onSelect={handleTicketSelect}
+                      ticketTypes={ticketTypes.map((t) => ({
+                        id: t.id,
+                        name: t.name,
+                        price: Number(t.price),
+                        quantity: t.quantity,
+                        sold_count: t.sold_count,
+                        description: t.description,
+                      }))}
+                      onCheckout={handleTicketCheckout}
                     />
                   )
                 )}
               </>
+            )}
+
+            {event.status === EVENT_STATUS.APPROVED && isOrganizer && (
+              <div className="rounded-xl border border-amber-100 bg-amber-50/80 p-6 shadow-sm">
+                <h3 className="mb-2 text-sm font-semibold text-amber-900">
+                  Organizer view
+                </h3>
+                <p className="text-sm text-amber-900/80">
+                  Ticket checkout and guest RSVP are disabled for organizer accounts. Use{' '}
+                  <Link to="/my-events" className="font-medium underline hover:no-underline">
+                    My Events
+                  </Link>{' '}
+                  or your dashboard to manage listings, guest lists, and RSVP approvals.
+                </p>
+                {isOwner && event.is_free && (
+                  <Link
+                    to={`/organizer/events/${event.id}/guestlist`}
+                    className="mt-4 inline-flex text-sm font-medium text-orange-700 underline hover:text-orange-800"
+                  >
+                    Open guest list
+                  </Link>
+                )}
+              </div>
             )}
 
             {/* Quick info card */}
@@ -475,25 +659,38 @@ const EventDetailPage: React.FC = () => {
                 <div className="flex justify-between">
                   <dt className="text-gray-500">Price</dt>
                   <dd className="font-medium text-gray-900">
-                    {event.is_free ? 'Free' : formatPrice(0, false)}
+                    {event.is_free ? 'Free' : formatPrice(eventPrice, false)}
                   </dd>
                 </div>
-                {event.max_attendees && (
+                {(event.capacity ?? event.max_attendees) != null && (
                   <div className="flex justify-between">
                     <dt className="text-gray-500">Capacity</dt>
                     <dd className="font-medium text-gray-900">
-                      {event.max_attendees}
+                      {event.capacity ?? event.max_attendees}
                     </dd>
                   </div>
                 )}
                 <div className="flex justify-between">
                   <dt className="text-gray-500">Format</dt>
                   <dd className="font-medium text-gray-900">
-                    {event.is_virtual ? 'Online' : 'In Person'}
+                    {isOnline ? 'Online' : 'In Person'}
                   </dd>
                 </div>
               </dl>
             </div>
+
+            {event.status === EVENT_STATUS.APPROVED && (
+              <GoogleCalendarActions
+                eventId={event.id}
+                title={event.title}
+                description={event.description}
+                startDate={event.start_date}
+                endDate={event.end_date}
+                location={[event.venue_name, event.address, event.city]
+                  .filter(Boolean)
+                  .join(', ')}
+              />
+            )}
           </div>
         </aside>
       </div>

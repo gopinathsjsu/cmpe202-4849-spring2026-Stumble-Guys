@@ -1,62 +1,86 @@
 import { create } from 'zustand';
 import { notificationApi } from '../api/notificationApi_Sasi';
 
-export interface NotificationType {
+export interface Notification {
   id: string;
+  user_id: string;
+  event_id?: string | null;
+  event?: { id: string; slug: string | null; title: string } | null;
+  type: string;
   title: string;
   message: string;
-  type: string;
   is_read: boolean;
+  channel?: string;
   sent_at: string;
-  event_id?: string | null;
 }
 
 interface NotificationState {
-  notifications: NotificationType[];
+  notifications: Notification[];
   unreadCount: number;
   isLoading: boolean;
-  fetchMyNotifications: () => Promise<void>;
-  markRead: (id: string) => Promise<void>;
-  setNotifications: (notifications: NotificationType[]) => void;
+
+  fetchNotifications: (params?: {
+    page?: number;
+    limit?: number;
+    is_read?: boolean;
+  }) => Promise<void>;
+  markAsRead: (id: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
+  setUnreadCount: (count: number) => void;
 }
 
-function calcUnread(notifications: NotificationType[]) {
-  return notifications.reduce((count, n) => count + (n.is_read ? 0 : 1), 0);
-}
-
-const useNotificationStore = create<NotificationState>((set, get) => ({
+const useNotificationStore = create<NotificationState>((set) => ({
   notifications: [],
   unreadCount: 0,
   isLoading: false,
 
-  setNotifications: (notifications) => {
-    set({ notifications, unreadCount: calcUnread(notifications) });
-  },
-
-  fetchMyNotifications: async () => {
+  fetchNotifications: async (params) => {
     set({ isLoading: true });
     try {
-      const data = await notificationApi.listMine();
-      const notifications: NotificationType[] = data.data ?? data;
-      set({
-        notifications,
-        unreadCount: calcUnread(notifications),
-        isLoading: false,
-      });
-    } catch (e) {
+      const data = await notificationApi.getNotifications(params);
+      const notifications: Notification[] =
+        data.data.notifications ?? data.data.data ?? data.data;
+      const unreadCount = notifications.filter((n) => !n.is_read).length;
+      set({ notifications, unreadCount, isLoading: false });
+    } catch (error) {
       set({ isLoading: false });
-      throw e;
+      throw error;
     }
   },
 
-  markRead: async (id) => {
-    await notificationApi.markRead(id);
-    const updated = get().notifications.map((n) =>
-      n.id === id ? { ...n, is_read: true } : n
-    );
-    set({ notifications: updated, unreadCount: calcUnread(updated) });
+  markAsRead: async (id) => {
+    try {
+      await notificationApi.markAsRead(id);
+      set((state) => {
+        const notifications = state.notifications.map((n) =>
+          n.id === id ? { ...n, is_read: true } : n
+        );
+        return {
+          notifications,
+          unreadCount: notifications.filter((n) => !n.is_read).length,
+        };
+      });
+    } catch (error) {
+      throw error;
+    }
   },
+
+  markAllAsRead: async () => {
+    try {
+      await notificationApi.markAllAsRead();
+      set((state) => ({
+        notifications: state.notifications.map((n) => ({
+          ...n,
+          is_read: true,
+        })),
+        unreadCount: 0,
+      }));
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  setUnreadCount: (count) => set({ unreadCount: count }),
 }));
 
 export default useNotificationStore;
-

@@ -33,6 +33,36 @@ const defaultPagination: Pagination = {
   totalPages: 0,
 };
 
+function getEventList(payload: unknown): EventType[] {
+  if (Array.isArray(payload)) return payload as EventType[];
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    Array.isArray((payload as { events?: unknown }).events)
+  ) {
+    return (payload as { events: EventType[] }).events;
+  }
+  return [];
+}
+
+function getPagination(payload: unknown, fallback?: unknown): Pagination {
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    (payload as { pagination?: Pagination }).pagination
+  ) {
+    return (payload as { pagination: Pagination }).pagination;
+  }
+  if (
+    fallback &&
+    typeof fallback === 'object' &&
+    (fallback as { pagination?: Pagination }).pagination
+  ) {
+    return (fallback as { pagination: Pagination }).pagination;
+  }
+  return defaultPagination;
+}
+
 const useSearchStore = create<SearchState>((set, get) => ({
   results: [],
   trending: [],
@@ -44,12 +74,12 @@ const useSearchStore = create<SearchState>((set, get) => ({
   search: async (params) => {
     set({ isLoading: true });
     try {
-      const mergedParams = { ...get().query, ...params };
-      const data = await searchApi.searchEvents(mergedParams);
+      const nextQuery = { ...params };
+      const data = await searchApi.searchEvents(nextQuery);
       set({
-        results: data.data.events ?? data.data,
-        pagination: data.data.pagination ?? defaultPagination,
-        query: mergedParams,
+        results: getEventList(data.data),
+        pagination: getPagination(data.data, data),
+        query: nextQuery,
         isLoading: false,
       });
     } catch (error) {
@@ -61,7 +91,7 @@ const useSearchStore = create<SearchState>((set, get) => ({
   fetchTrending: async () => {
     try {
       const data = await searchApi.getTrendingEvents();
-      set({ trending: data.data });
+      set({ trending: getEventList(data.data) });
     } catch (error) {
       throw error;
     }
@@ -72,7 +102,7 @@ const useSearchStore = create<SearchState>((set, get) => ({
     try {
       const data = await searchApi.getSavedEvents(params);
       set({
-        savedEvents: data.data.events ?? data.data,
+        savedEvents: getEventList(data.data),
         isLoading: false,
       });
     } catch (error) {
@@ -129,5 +159,3 @@ const useSearchStore = create<SearchState>((set, get) => ({
 }));
 
 export default useSearchStore;
-
-// Trending events state management - Sprint 4

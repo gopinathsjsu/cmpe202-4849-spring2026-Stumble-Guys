@@ -1,10 +1,8 @@
-import React, { useEffect, useMemo, useCallback } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import SearchBar from '../components/search/SearchBar_Pratham';
-import FilterPanel from '../components/search/FilterPanel_Pratham';
 import SearchResults from '../components/search/SearchResults_Pratham';
-import TrendingSection from '../components/search/TrendingSection_Pratham';
 import Pagination from '../components/shared/Pagination_Pratham';
 import useSearchStore from '../store/searchStore_Pratham';
 import useEventStore from '../store/eventStore_Nikhil';
@@ -15,16 +13,20 @@ const SORT_MAP: Record<string, { sort_by?: string; sort_order?: 'asc' | 'desc' }
   price: { sort_by: 'price', sort_order: 'asc' },
 };
 
+function categoryIdsFromParam(raw: string): string[] {
+  if (!raw) return [];
+  return raw.split(',').map((s) => s.trim()).filter(Boolean);
+}
+
 const SearchPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const {
     results,
-    trending,
     isLoading,
     pagination,
     search,
-    fetchTrending,
+    clearResults,
   } = useSearchStore();
 
   const { categories, fetchCategories } = useEventStore();
@@ -39,21 +41,26 @@ const SearchPage: React.FC = () => {
 
   useEffect(() => {
     fetchCategories();
-    fetchTrending();
-  }, [fetchCategories, fetchTrending]);
+  }, [fetchCategories]);
 
   useEffect(() => {
-    const params: Record<string, unknown> = { q: qParam, page: pageParam };
-    if (categoryParam) params.category = categoryParam;
-    if (cityParam) params.city = cityParam;
-    if (isFreeParam === 'free') params.is_free = true;
-    else if (isFreeParam === 'paid') params.is_free = false;
-    if (startParam) params.start_date = startParam;
-    if (endParam) params.end_date = endParam;
+    if (!qParam.trim()) {
+      clearResults();
+      return;
+    }
+    const params: Record<string, unknown> = { q: qParam || undefined, page: pageParam };
+    const catIds = categoryIdsFromParam(categoryParam);
+    params.category = catIds.length ? catIds.join(',') : undefined;
+    params.city = cityParam || undefined;
+    params.is_free = isFreeParam === 'free' ? true : isFreeParam === 'paid' ? false : undefined;
+    params.start_date = startParam || undefined;
+    params.end_date = endParam || undefined;
+    params.sort_by = searchParams.get('sort_by') || undefined;
+    params.sort_order = (searchParams.get('sort_order') as 'asc' | 'desc' | null) || undefined;
 
     search(params as Parameters<typeof search>[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qParam, categoryParam, cityParam, isFreeParam, startParam, endParam, pageParam]);
+  }, [qParam, categoryParam, cityParam, isFreeParam, startParam, endParam, pageParam, searchParams, clearResults]);
 
   const updateParam = useCallback(
     (updates: Record<string, string>) => {
@@ -78,24 +85,6 @@ const SearchPage: React.FC = () => {
     [updateParam]
   );
 
-  const handleFilterChange = useCallback(
-    (filters: {
-      category: string;
-      dateRange: { start: string; end: string };
-      isFree: 'all' | 'free' | 'paid';
-      city: string;
-    }) => {
-      updateParam({
-        category: filters.category,
-        start_date: filters.dateRange.start,
-        end_date: filters.dateRange.end,
-        is_free: filters.isFree === 'all' ? '' : filters.isFree,
-        city: filters.city,
-      });
-    },
-    [updateParam]
-  );
-
   const handleSortChange = useCallback(
     (sort: string) => {
       const sortConfig = SORT_MAP[sort] ?? {};
@@ -117,16 +106,8 @@ const SearchPage: React.FC = () => {
     [updateParam]
   );
 
-  const categoryNames = useMemo(
-    () => categories.map((c) => c.name),
-    [categories]
-  );
-
-  const hasQuery = qParam || categoryParam || cityParam || isFreeParam !== 'all';
-
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* Search bar */}
       <div className="mb-8">
         <div className="mb-2 flex items-center gap-2">
           <Search className="h-6 w-6 text-orange-500" />
@@ -141,23 +122,8 @@ const SearchPage: React.FC = () => {
       </div>
 
       <div className="flex gap-8">
-        {/* Filter sidebar (desktop) / toggle (mobile) */}
-        <FilterPanel
-          filters={{
-            category: categoryParam,
-            dateRange: { start: startParam, end: endParam },
-            isFree: (isFreeParam as 'all' | 'free' | 'paid') || 'all',
-            city: cityParam,
-          }}
-          categories={categoryNames}
-          onFilterChange={handleFilterChange}
-        />
-
-        {/* Main content */}
         <div className="min-w-0 flex-1">
-          {!hasQuery && !isLoading ? (
-            <TrendingSection events={trending as never[]} isLoading={false} />
-          ) : (
+          {qParam.trim() ? (
             <>
               <SearchResults
                 results={results as never[]}
@@ -176,7 +142,7 @@ const SearchPage: React.FC = () => {
                 </div>
               )}
             </>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
@@ -184,5 +150,3 @@ const SearchPage: React.FC = () => {
 };
 
 export default SearchPage;
-
-// Error boundary and cross-browser input fixes - Sprint 5

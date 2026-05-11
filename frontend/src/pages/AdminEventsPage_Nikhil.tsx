@@ -1,33 +1,18 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { Shield, CheckCircle, Clock, XCircle, Inbox } from 'lucide-react';
 import { eventApi, type EventFilters } from '../api/eventApi_Nikhil';
-import EventApprovalCard from '../components/events/EventApprovalCard_Nikhil';
+import EventApprovalCard, {
+  type ApprovalEventDetail,
+} from '../components/events/EventApprovalCard_Nikhil';
 import RoleGuard from '../components/auth/RoleGuard_Preetam';
 import LoadingSpinner from '../components/shared/LoadingSpinner_Pratham';
 import EmptyState from '../components/shared/EmptyState_Nikhil';
 import Pagination from '../components/shared/Pagination_Pratham';
-import { useToast } from '../components/shared/Toast_Sasi';
+import { useToastStore } from '../components/shared/Toast_Sasi';
+import { getApiErrorMessage } from '../utils/apiError_Pratham';
 import { cn } from '../utils/cn_Pratham';
 import { ROLES, EVENT_STATUS } from '../utils/constants_Preetam';
-
-interface ApprovalEvent {
-  id: string;
-  title: string;
-  description: string;
-  start_date: string;
-  end_date: string;
-  venue_name?: string;
-  city?: string;
-  image_url?: string;
-  status: 'pending_approval' | 'approved' | 'rejected';
-  organizer: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    email: string;
-    avatar_url?: string;
-  };
-}
 
 const TABS = [
   {
@@ -47,10 +32,69 @@ const TABS = [
   },
 ] as const;
 
+function parseModerationApiBody(body: unknown): {
+  events: ApprovalEventDetail[];
+  pagination: { page: number; totalPages: number; total: number };
+} {
+  const fallback = { page: 1, totalPages: 1, total: 0 };
+  if (!body || typeof body !== 'object') {
+    return { events: [], pagination: fallback };
+  }
+  const root = body as Record<string, unknown>;
+  const inner = root.data;
+
+  let rows: unknown[] = [];
+  let pagination: typeof fallback | undefined;
+
+  if (Array.isArray(inner)) {
+    rows = inner;
+    pagination = root.pagination as typeof fallback;
+  } else if (inner && typeof inner === 'object') {
+    const mid = inner as Record<string, unknown>;
+    if (Array.isArray(mid.data)) rows = mid.data;
+    else if (Array.isArray(mid.events)) rows = mid.events;
+    const p = (mid.pagination ?? root.pagination) as Record<string, unknown> | undefined;
+    if (p && typeof p === 'object') {
+      pagination = {
+        page: Number(p.page) || 1,
+        totalPages: Number(p.totalPages) || 1,
+        total: Number(p.total) || 0,
+      };
+    }
+  }
+
+  const normalized = rows.map((raw) => {
+    const e = raw as Record<string, unknown>;
+    const org = e.organizer as Record<string, unknown> | null | undefined;
+    return {
+      ...e,
+      image_url: (e.image_url as string) ?? undefined,
+      organizer: org
+        ? {
+            id: String(org.id ?? ''),
+            first_name: String(org.first_name ?? ''),
+            last_name: String(org.last_name ?? ''),
+            email: String(org.email ?? ''),
+            avatar_url: org.avatar_url ? String(org.avatar_url) : undefined,
+          }
+        : {
+            id: '',
+            first_name: 'Unknown',
+            last_name: '',
+            email: '',
+          },
+    } as ApprovalEventDetail;
+  });
+
+  return {
+    events: normalized,
+    pagination: pagination ?? fallback,
+  };
+}
+
 const AdminEventsPage: React.FC = () => {
-  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<string>(EVENT_STATUS.PENDING);
-  const [events, setEvents] = useState<ApprovalEvent[]>([]);
+  const [events, setEvents] = useState<ApprovalEventDetail[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -58,29 +102,28 @@ const AdminEventsPage: React.FC = () => {
     total: 0,
   });
 
-  const loadEvents = useCallback(
-    async (page = 1) => {
-      setIsLoading(true);
-      try {
-        const params: EventFilters = { status: activeTab, page, limit: 20 };
-        const response = await eventApi.getPendingEvents(params);
-        const data = response.data;
-        setEvents(data.events ?? data ?? []);
-        if (data.pagination) {
-          setPagination({
-            page: data.pagination.page,
-            totalPages: data.pagination.totalPages,
-            total: data.pagination.total,
-          });
-        }
-      } catch {
-        toast.error('Failed to load events');
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [activeTab, toast]
-  );
+  const loadSeq = useRef(0);
+
+  const loadEvents = useCallback(async (page = 1) => {
+    const seq = ++loadSeq.current;
+    setIsLoading(true);
+    try {
+      const params: EventFilters = { status: activeTab, page, limit: 10 };
+      const apiBody = await eventApi.getPendingEvents(params);
+      if (seq !== loadSeq.current) return;
+      const { events: list, pagination: pag } = parseModerationApiBody(apiBody);
+      setEvents(list);
+      setPagination(pag);
+    } catch (err) {
+      if (seq !== loadSeq.current) return;
+      useToastStore.getState().addToast(
+        'error',
+        getApiErrorMessage(err, 'Failed to load events')
+      );
+    } finally {
+      if (seq === loadSeq.current) setIsLoading(false);
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     loadEvents(1);
@@ -89,30 +132,58 @@ const AdminEventsPage: React.FC = () => {
   const handleApprove = async (id: string, notes: string) => {
     try {
       await eventApi.approveEvent(id, notes || undefined);
-      toast.success('Event approved');
+      useToastStore.getState().addToast('success', 'Event approved');
       setEvents((prev) => prev.filter((e) => e.id !== id));
-    } catch {
-      toast.error('Failed to approve event');
+    } catch (err) {
+      useToastStore.getState().addToast(
+        'error',
+        getApiErrorMessage(err, 'Failed to approve event')
+      );
     }
   };
 
   const handleReject = async (id: string, notes: string) => {
     if (!notes.trim()) {
-      toast.warning('Please provide a reason for rejection');
+      useToastStore.getState().addToast(
+        'warning',
+        'Please provide a reason for rejection'
+      );
       return;
     }
     try {
       await eventApi.rejectEvent(id, notes);
-      toast.success('Event rejected');
+      useToastStore.getState().addToast('success', 'Event rejected');
       setEvents((prev) => prev.filter((e) => e.id !== id));
-    } catch {
-      toast.error('Failed to reject event');
+    } catch (err) {
+      useToastStore.getState().addToast(
+        'error',
+        getApiErrorMessage(err, 'Failed to reject event')
+      );
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await eventApi.deleteEvent(id);
+      useToastStore.getState().addToast('success', 'Event deleted');
+      setEvents((prev) => prev.filter((e) => e.id !== id));
+    } catch (err) {
+      useToastStore.getState().addToast(
+        'error',
+        getApiErrorMessage(err, 'Failed to delete event')
+      );
     }
   };
 
   return (
     <RoleGuard allowedRoles={[ROLES.ADMIN]} redirectTo="/">
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+        <Link
+          to="/admin"
+          className="mb-6 inline-block text-sm font-medium text-orange-600 hover:text-orange-700"
+        >
+          ← Dashboard
+        </Link>
         {/* Header */}
         <div className="mb-8 flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-50">
@@ -120,10 +191,10 @@ const AdminEventsPage: React.FC = () => {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              Event Moderation
+              Review
             </h1>
             <p className="text-sm text-gray-500">
-              Review, approve, or reject submitted events
+              Pending events — approve or reject
             </p>
           </div>
         </div>
@@ -176,6 +247,7 @@ const AdminEventsPage: React.FC = () => {
                 event={event}
                 onApprove={handleApprove}
                 onReject={handleReject}
+                onDelete={activeTab !== EVENT_STATUS.PENDING ? handleDelete : undefined}
               />
             ))}
 

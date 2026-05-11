@@ -30,6 +30,7 @@ export class AuthService {
         password_hash,
         first_name: input.first_name,
         last_name: input.last_name,
+        role: input.role ?? 'attendee',
       },
     });
 
@@ -214,6 +215,7 @@ export class AuthService {
     bio: string | null;
     is_verified: boolean;
     created_at: Date;
+    google_calendar_refresh_token?: string | null;
   }): UserResponse {
     return {
       id: user.id,
@@ -226,6 +228,7 @@ export class AuthService {
       bio: user.bio,
       is_verified: user.is_verified,
       created_at: user.created_at,
+      google_calendar_connected: Boolean(user.google_calendar_refresh_token),
     };
   }
 }

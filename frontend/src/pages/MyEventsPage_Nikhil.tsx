@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Plus,
   Eye,
-  Pencil,
   Trash2,
   Send,
   Calendar,
@@ -14,6 +13,7 @@ import {
   XCircle,
   Ban,
   FileText,
+  Users,
 } from 'lucide-react';
 import useEventStore, { type EventType } from '../store/eventStore_Nikhil';
 import { formatDate } from '../utils/formatDate_Sasi';
@@ -101,7 +101,7 @@ const MyEventsPage: React.FC = () => {
       {/* Header */}
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">My Events</h1>
+          <h1 className="text-3xl font-bold text-gray-900">My Events</h1>
           <p className="mt-1 text-sm text-gray-500">
             Manage and track all your organized events
           </p>
@@ -234,6 +234,14 @@ const MyEventsPage: React.FC = () => {
                     >
                       {badge.label}
                     </span>
+                    {event.approval_notes &&
+                      (event.status === EVENT_STATUS.REJECTED ||
+                        event.status === EVENT_STATUS.APPROVED) && (
+                        <p className="mt-1 line-clamp-2 text-xs text-gray-500">
+                          <span className="font-medium text-gray-600">Admin note:</span>{' '}
+                          {event.approval_notes}
+                        </p>
+                      )}
                   </div>
 
                   {/* Tickets */}
@@ -252,11 +260,11 @@ const MyEventsPage: React.FC = () => {
                       <Eye className="h-4 w-4" />
                     </Link>
                     <Link
-                      to={`/events/${event.id}/edit`}
+                      to={`/organizer/events/${event.id}/guestlist`}
                       className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-                      title="Edit"
+                      title="Guest list"
                     >
-                      <Pencil className="h-4 w-4" />
+                      <Users className="h-4 w-4" />
                     </Link>
 
                     {event.status === EVENT_STATUS.DRAFT && (

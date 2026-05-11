@@ -142,29 +142,41 @@ export class LocationService {
   }
 
   static async getEventStats(eventId: string) {
-    const [viewCount, rsvpCounts, ticketSold] = await Promise.all([
+    const [
+      viewCount,
+      goingApproved,
+      goingPending,
+      maybeCount,
+      notGoingCount,
+      ticketSold,
+    ] = await Promise.all([
       prisma.eventView.count({ where: { event_id: eventId } }),
-      prisma.rsvp.groupBy({
-        by: ['status'],
-        where: { event_id: eventId },
-        _count: { status: true },
+      prisma.rsvp.count({
+        where: {
+          event_id: eventId,
+          status: 'going',
+          approval_status: { in: ['approved', 'not_required'] },
+        },
       }),
+      prisma.rsvp.count({
+        where: { event_id: eventId, status: 'going', approval_status: 'pending' },
+      }),
+      prisma.rsvp.count({ where: { event_id: eventId, status: 'maybe' } }),
+      prisma.rsvp.count({ where: { event_id: eventId, status: 'not_going' } }),
       prisma.ticket.count({
         where: { event_id: eventId, status: 'confirmed' },
       }),
     ]);
 
-    const rsvps: Record<string, number> = {};
-    for (const entry of rsvpCounts) {
-      rsvps[entry.status] = entry._count.status;
-    }
-
     return {
       views: viewCount,
-      rsvps,
+      rsvps: {
+        going: goingApproved,
+        going_pending: goingPending,
+        maybe: maybeCount,
+        not_going: notGoingCount,
+      },
       ticketsSold: ticketSold,
     };
   }
 }
-
-// Map bounds filtering support - Sprint 4

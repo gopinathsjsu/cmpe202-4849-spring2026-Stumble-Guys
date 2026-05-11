@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { seedUsers } from './seed-users_Preetam';
 import { seedTickets } from './seed-tickets_Sasi';
 import { updateEventLocations, getVenue } from './seed-locations_Pratham';
@@ -9,6 +9,33 @@ interface CategorySeed {
   name: string;
   slug: string;
   icon: string;
+}
+
+interface EventSeed {
+  organizer_id: string;
+  category_id: string;
+  title: string;
+  slug: string;
+  description: string;
+  short_desc: string;
+  start_date: Date;
+  end_date: Date;
+  venue_name?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  latitude?: number;
+  longitude?: number;
+  is_online?: boolean;
+  online_url?: string;
+  is_free: boolean;
+  price: number;
+  capacity: number;
+  status: string;
+  tags: string[];
+  image_url: string;
+  schedule?: Prisma.InputJsonValue;
 }
 
 const categories: CategorySeed[] = [
@@ -65,9 +92,11 @@ async function seedEvents(
   console.log('🌱 Seeding events...');
 
   const org1 = organizerIds[0];
-  const org2 = organizerIds[1];
+  // For easier testing: seed all events under a single organizer (org1).
+  // Keep org2 user seeded (seed-users) but don't attach events to it.
+  const org2 = organizerIds[0];
 
-  const eventData = [
+  const eventData: EventSeed[] = [
     // --- MUSIC (4 events) ---
     {
       organizer_id: org1,
@@ -814,6 +843,46 @@ async function seedEvents(
   return createdEvents;
 }
 
+/** Demo data so organizer RSVP queue is non-empty after seed (free events + pending approval). */
+async function seedPendingRsvps(organizerId: string, attendeeUserIds: string[]) {
+  console.log('🌱 Seeding pending RSVPs (Going → awaiting organizer approval)...');
+
+  const targets = await prisma.event.findMany({
+    where: { organizer_id: organizerId, is_free: true, status: 'approved' },
+    select: { id: true, title: true },
+    orderBy: { start_date: 'asc' },
+    take: 12,
+  });
+
+  if (targets.length === 0 || attendeeUserIds.length === 0) {
+    console.log('  ⏭️  Skip: no free approved events or no attendees.\n');
+    return;
+  }
+
+  const pairs = Math.min(targets.length, attendeeUserIds.length, 6);
+  for (let i = 0; i < pairs; i++) {
+    const ev = targets[i];
+    const uid = attendeeUserIds[i];
+    await prisma.rsvp.upsert({
+      where: {
+        event_id_user_id: { event_id: ev.id, user_id: uid },
+      },
+      update: {
+        status: 'going',
+        approval_status: 'pending',
+      },
+      create: {
+        event_id: ev.id,
+        user_id: uid,
+        status: 'going',
+        approval_status: 'pending',
+      },
+    });
+    console.log(`  ✅ Pending RSVP: ${ev.title}`);
+  }
+  console.log(`🌱 Seeded ${pairs} pending RSVP(s).\n`);
+}
+
 async function main() {
   console.log('🚀 Starting EventHub database seed...\n');
 
@@ -836,7 +905,11 @@ async function main() {
 
     await seedTickets(events, users);
 
-    console.log('✅ Nikhil event data seeding completed successfully!');
+    const org1 = users.find((u) => u.email === 'org1@eventhub.com')!;
+    const attendeeIds = users.filter((u) => u.role === 'attendee').map((u) => u.id);
+    await seedPendingRsvps(org1.id, attendeeIds);
+
+    console.log('✅ Database seeding completed successfully!');
   } catch (error) {
     console.error('❌ Seeding failed:', error);
     throw error;

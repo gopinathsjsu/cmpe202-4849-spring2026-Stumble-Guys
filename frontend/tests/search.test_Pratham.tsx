@@ -212,13 +212,18 @@ describe('SearchBar', () => {
 
 describe('FilterPanel', () => {
   const defaultFilters = {
-    category: '',
+    categoryIds: [] as string[],
     dateRange: { start: '', end: '' },
     isFree: 'all' as const,
     city: '',
   };
 
-  const categories = ['Music', 'Technology', 'Food', 'Sports'];
+  const categories = [
+    { id: '1', name: 'Music' },
+    { id: '2', name: 'Technology' },
+    { id: '3', name: 'Food' },
+    { id: '4', name: 'Sports' },
+  ];
 
   it('renders filter sections', () => {
     render(

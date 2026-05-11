@@ -1,11 +1,23 @@
-node_modules/
-dist/
-build/
-.env
-*.log
 .DS_Store
-coverage/
-.terraform/
-*.tfstate
-*.tfstate.backup
-.terraform.lock.hcl
+*.log
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Build / cache
+eventhub/backend/dist/
+eventhub/frontend/dist/
+eventhub/frontend/.vite/
+*.tsbuildinfo
+
+# Prisma
+eventhub/backend/prisma/*.db
+eventhub/backend/prisma/*.db-journal
+
+# IDE / tooling
+.idea/
+.vscode/
+*.swp

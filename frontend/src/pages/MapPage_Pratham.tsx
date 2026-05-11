@@ -25,9 +25,27 @@ interface MapEvent {
   start_date: string;
   venue_name: string;
   is_free: boolean;
-  price: number;
+  price: number | string;
   image_url?: string;
-  category?: string;
+  category?: string | { name?: string };
+}
+
+function getCategoryName(category: MapEvent['category']) {
+  return typeof category === 'string' ? category : category?.name;
+}
+
+function normalizeMapEvents(payload: unknown): MapEvent[] {
+  const raw = Array.isArray(payload) ? payload : [];
+  return raw.map((event) => {
+    const item = event as MapEvent & { cover_image?: string; image_url?: string };
+    return {
+      ...item,
+      latitude: Number(item.latitude),
+      longitude: Number(item.longitude),
+      price: Number(item.price ?? 0),
+      image_url: item.image_url ?? item.cover_image,
+    };
+  });
 }
 
 const MapPage: React.FC = () => {
@@ -44,7 +62,7 @@ const MapPage: React.FC = () => {
     setIsLoading(true);
     try {
       const data = await searchApi.getMapEvents(b);
-      setEvents(data.data ?? data ?? []);
+      setEvents(normalizeMapEvents(data.data ?? data));
     } catch {
       // silent
     } finally {
@@ -77,10 +95,10 @@ const MapPage: React.FC = () => {
   }, [handleLocate]);
 
   const filteredEvents = categoryFilter
-    ? events.filter((e) => e.category === categoryFilter)
+    ? events.filter((e) => getCategoryName(e.category) === categoryFilter)
     : events;
 
-  const categories = [...new Set(events.map((e) => e.category).filter(Boolean))];
+  const categories = [...new Set(events.map((e) => getCategoryName(e.category)).filter(Boolean))];
 
   return (
     <div className="relative flex h-[calc(100vh-64px)] flex-col lg:flex-row">
@@ -225,7 +243,7 @@ const MapPage: React.FC = () => {
                       : 'bg-orange-100 text-orange-700'
                   )}
                 >
-                  {formatPrice(event.price, event.is_free)}
+                  {formatPrice(Number(event.price), event.is_free)}
                 </span>
               </div>
             </Link>
@@ -237,5 +255,3 @@ const MapPage: React.FC = () => {
 };
 
 export default MapPage;
-
-// Error boundary wrapper for map rendering failures - Sprint 5
