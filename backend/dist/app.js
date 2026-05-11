@@ -1,0 +1,53 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+require("dotenv/config");
+const express_1 = __importDefault(require("express"));
+const helmet_1 = __importDefault(require("helmet"));
+const cookie_parser_1 = __importDefault(require("cookie-parser"));
+const cors_Pratham_1 = require("./middleware/cors_Pratham");
+const rateLimiter_Pratham_1 = require("./middleware/rateLimiter_Pratham");
+const errorHandler_Pratham_1 = require("./middleware/errorHandler_Pratham");
+const authRoutes_Preetam_1 = __importDefault(require("./routes/authRoutes_Preetam"));
+const userRoutes_Preetam_1 = __importDefault(require("./routes/userRoutes_Preetam"));
+const eventRoutes_Nikhil_1 = __importDefault(require("./routes/eventRoutes_Nikhil"));
+const categoryRoutes_Nikhil_1 = __importDefault(require("./routes/categoryRoutes_Nikhil"));
+const adminRoutes_Nikhil_1 = __importDefault(require("./routes/adminRoutes_Nikhil"));
+const ticketRoutes_Sasi_1 = __importDefault(require("./routes/ticketRoutes_Sasi"));
+const rsvpRoutes_Sasi_1 = __importDefault(require("./routes/rsvpRoutes_Sasi"));
+const notificationRoutes_Sasi_1 = __importDefault(require("./routes/notificationRoutes_Sasi"));
+const searchRoutes_Pratham_1 = __importDefault(require("./routes/searchRoutes_Pratham"));
+const locationRoutes_Pratham_1 = __importDefault(require("./routes/locationRoutes_Pratham"));
+const organizerRoutes_Preetam_1 = __importDefault(require("./routes/organizerRoutes_Preetam"));
+const integrationsRoutes_Nikhil_1 = __importDefault(require("./routes/integrationsRoutes_Nikhil"));
+const uploadRoutes_Preetam_1 = __importDefault(require("./routes/uploadRoutes_Preetam"));
+const app = (0, express_1.default)();
+app.use((0, helmet_1.default)());
+app.use(cors_Pratham_1.corsMiddleware);
+app.use(express_1.default.json());
+app.use(express_1.default.urlencoded({ extended: true }));
+app.use((0, cookie_parser_1.default)());
+// Serve uploaded files behind the API prefix so Vite's /api/v1 proxy works in dev.
+app.use('/api/v1/uploads/files', express_1.default.static('uploads'));
+app.get('/api/health', (_req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+app.use('/api/v1/auth', rateLimiter_Pratham_1.authLimiter, authRoutes_Preetam_1.default);
+app.use('/api/v1', rateLimiter_Pratham_1.apiLimiter);
+app.use('/api/v1/users', userRoutes_Preetam_1.default);
+app.use('/api/v1/organizer', organizerRoutes_Preetam_1.default);
+app.use('/api/v1/integrations', integrationsRoutes_Nikhil_1.default);
+// Location routes (nearby, map, trending) must register before event `/:slug` routes
+app.use('/api/v1/events', locationRoutes_Pratham_1.default);
+app.use('/api/v1/events', eventRoutes_Nikhil_1.default);
+app.use('/api/v1/events', ticketRoutes_Sasi_1.default);
+app.use('/api/v1/events', rsvpRoutes_Sasi_1.default);
+app.use('/api/v1/categories', categoryRoutes_Nikhil_1.default);
+app.use('/api/v1/admin', adminRoutes_Nikhil_1.default);
+app.use('/api/v1/notifications', notificationRoutes_Sasi_1.default);
+app.use('/api/v1/search', searchRoutes_Pratham_1.default);
+app.use('/api/v1/uploads', uploadRoutes_Preetam_1.default);
+app.use(errorHandler_Pratham_1.errorHandler);
+exports.default = app;

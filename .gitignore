@@ -1,0 +1,23 @@
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Build / cache
+eventhub/backend/dist/
+eventhub/frontend/dist/
+eventhub/frontend/.vite/
+*.tsbuildinfo
+
+# Prisma
+eventhub/backend/prisma/*.db
+eventhub/backend/prisma/*.db-journal
+
+# IDE / tooling
+.idea/
+.vscode/
+*.swp

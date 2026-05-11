@@ -1,0 +1,270 @@
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { Shield, CheckCircle, Clock, XCircle, Inbox } from 'lucide-react';
+import { eventApi, type EventFilters } from '../api/eventApi_Nikhil';
+import EventApprovalCard, {
+  type ApprovalEventDetail,
+} from '../components/events/EventApprovalCard_Nikhil';
+import RoleGuard from '../components/auth/RoleGuard_Preetam';
+import LoadingSpinner from '../components/shared/LoadingSpinner_Pratham';
+import EmptyState from '../components/shared/EmptyState_Nikhil';
+import Pagination from '../components/shared/Pagination_Pratham';
+import { useToastStore } from '../components/shared/Toast_Sasi';
+import { getApiErrorMessage } from '../utils/apiError_Pratham';
+import { cn } from '../utils/cn_Pratham';
+import { ROLES, EVENT_STATUS } from '../utils/constants_Preetam';
+
+const TABS = [
+  {
+    key: EVENT_STATUS.PENDING,
+    label: 'Pending',
+    icon: Clock,
+  },
+  {
+    key: EVENT_STATUS.APPROVED,
+    label: 'Approved',
+    icon: CheckCircle,
+  },
+  {
+    key: EVENT_STATUS.REJECTED,
+    label: 'Rejected',
+    icon: XCircle,
+  },
+] as const;
+
+function parseModerationApiBody(body: unknown): {
+  events: ApprovalEventDetail[];
+  pagination: { page: number; totalPages: number; total: number };
+} {
+  const fallback = { page: 1, totalPages: 1, total: 0 };
+  if (!body || typeof body !== 'object') {
+    return { events: [], pagination: fallback };
+  }
+  const root = body as Record<string, unknown>;
+  const inner = root.data;
+
+  let rows: unknown[] = [];
+  let pagination: typeof fallback | undefined;
+
+  if (Array.isArray(inner)) {
+    rows = inner;
+    pagination = root.pagination as typeof fallback;
+  } else if (inner && typeof inner === 'object') {
+    const mid = inner as Record<string, unknown>;
+    if (Array.isArray(mid.data)) rows = mid.data;
+    else if (Array.isArray(mid.events)) rows = mid.events;
+    const p = (mid.pagination ?? root.pagination) as Record<string, unknown> | undefined;
+    if (p && typeof p === 'object') {
+      pagination = {
+        page: Number(p.page) || 1,
+        totalPages: Number(p.totalPages) || 1,
+        total: Number(p.total) || 0,
+      };
+    }
+  }
+
+  const normalized = rows.map((raw) => {
+    const e = raw as Record<string, unknown>;
+    const org = e.organizer as Record<string, unknown> | null | undefined;
+    return {
+      ...e,
+      image_url: (e.image_url as string) ?? undefined,
+      organizer: org
+        ? {
+            id: String(org.id ?? ''),
+            first_name: String(org.first_name ?? ''),
+            last_name: String(org.last_name ?? ''),
+            email: String(org.email ?? ''),
+            avatar_url: org.avatar_url ? String(org.avatar_url) : undefined,
+          }
+        : {
+            id: '',
+            first_name: 'Unknown',
+            last_name: '',
+            email: '',
+          },
+    } as ApprovalEventDetail;
+  });
+
+  return {
+    events: normalized,
+    pagination: pagination ?? fallback,
+  };
+}
+
+const AdminEventsPage: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<string>(EVENT_STATUS.PENDING);
+  const [events, setEvents] = useState<ApprovalEventDetail[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    totalPages: 1,
+    total: 0,
+  });
+
+  const loadSeq = useRef(0);
+
+  const loadEvents = useCallback(async (page = 1) => {
+    const seq = ++loadSeq.current;
+    setIsLoading(true);
+    try {
+      const params: EventFilters = { status: activeTab, page, limit: 10 };
+      const apiBody = await eventApi.getPendingEvents(params);
+      if (seq !== loadSeq.current) return;
+      const { events: list, pagination: pag } = parseModerationApiBody(apiBody);
+      setEvents(list);
+      setPagination(pag);
+    } catch (err) {
+      if (seq !== loadSeq.current) return;
+      useToastStore.getState().addToast(
+        'error',
+        getApiErrorMessage(err, 'Failed to load events')
+      );
+    } finally {
+      if (seq === loadSeq.current) setIsLoading(false);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    loadEvents(1);
+  }, [loadEvents]);
+
+  const handleApprove = async (id: string, notes: string) => {
+    try {
+      await eventApi.approveEvent(id, notes || undefined);
+      useToastStore.getState().addToast('success', 'Event approved');
+      setEvents((prev) => prev.filter((e) => e.id !== id));
+    } catch (err) {
+      useToastStore.getState().addToast(
+        'error',
+        getApiErrorMessage(err, 'Failed to approve event')
+      );
+    }
+  };
+
+  const handleReject = async (id: string, notes: string) => {
+    if (!notes.trim()) {
+      useToastStore.getState().addToast(
+        'warning',
+        'Please provide a reason for rejection'
+      );
+      return;
+    }
+    try {
+      await eventApi.rejectEvent(id, notes);
+      useToastStore.getState().addToast('success', 'Event rejected');
+      setEvents((prev) => prev.filter((e) => e.id !== id));
+    } catch (err) {
+      useToastStore.getState().addToast(
+        'error',
+        getApiErrorMessage(err, 'Failed to reject event')
+      );
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await eventApi.deleteEvent(id);
+      useToastStore.getState().addToast('success', 'Event deleted');
+      setEvents((prev) => prev.filter((e) => e.id !== id));
+    } catch (err) {
+      useToastStore.getState().addToast(
+        'error',
+        getApiErrorMessage(err, 'Failed to delete event')
+      );
+    }
+  };
+
+  return (
+    <RoleGuard allowedRoles={[ROLES.ADMIN]} redirectTo="/">
+      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+        <Link
+          to="/admin"
+          className="mb-6 inline-block text-sm font-medium text-orange-600 hover:text-orange-700"
+        >
+          ← Dashboard
+        </Link>
+        {/* Header */}
+        <div className="mb-8 flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-50">
+            <Shield className="h-6 w-6 text-orange-500" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Review
+            </h1>
+            <p className="text-sm text-gray-500">
+              Pending events — approve or reject
+            </p>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="mb-8 flex gap-1 rounded-xl bg-gray-100 p-1">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={cn(
+                  'flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors',
+                  activeTab === tab.key
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.label}
+                {tab.key === EVENT_STATUS.PENDING && pagination.total > 0 && activeTab === tab.key && (
+                  <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-orange-500 px-1.5 text-[10px] font-bold text-white">
+                    {pagination.total}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Content */}
+        {isLoading ? (
+          <LoadingSpinner />
+        ) : events.length === 0 ? (
+          <EmptyState
+            icon={Inbox}
+            title={`No ${activeTab === EVENT_STATUS.PENDING ? 'pending' : activeTab === EVENT_STATUS.APPROVED ? 'approved' : 'rejected'} events`}
+            description={
+              activeTab === EVENT_STATUS.PENDING
+                ? 'All caught up! There are no events waiting for review.'
+                : `No events with ${activeTab.replace('_', ' ')} status.`
+            }
+          />
+        ) : (
+          <div className="space-y-6">
+            {events.map((event) => (
+              <EventApprovalCard
+                key={event.id}
+                event={event}
+                onApprove={handleApprove}
+                onReject={handleReject}
+                onDelete={activeTab !== EVENT_STATUS.PENDING ? handleDelete : undefined}
+              />
+            ))}
+
+            {pagination.totalPages > 1 && (
+              <div className="flex justify-center pt-4">
+                <Pagination
+                  currentPage={pagination.page}
+                  totalPages={pagination.totalPages}
+                  onPageChange={(page) => loadEvents(page)}
+                />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </RoleGuard>
+  );
+};
+
+export default AdminEventsPage;

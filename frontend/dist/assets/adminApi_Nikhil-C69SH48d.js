@@ -1,0 +1,1 @@
+import{w as e}from"./index-kJHAGtmA.js";const n={getDashboardStats:async()=>(await e.get("/admin/dashboard")).data,createCategory:async a=>(await e.post("/admin/categories",a)).data,updateCategory:async(a,t)=>(await e.put(`/admin/categories/${a}`,t)).data,deleteCategory:async a=>(await e.delete(`/admin/categories/${a}`)).data};export{n as a};
