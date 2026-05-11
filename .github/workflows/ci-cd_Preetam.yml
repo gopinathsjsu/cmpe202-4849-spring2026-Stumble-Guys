@@ -2,9 +2,9 @@ name: EventHub CI/CD Pipeline
 
 on:
   push:
-    branches: [main]
+    branches: [main, temp2-main]
   pull_request:
-    branches: [main]
+    branches: [main, temp2-main]
 
 env:
   NODE_VERSION: "20"
@@ -105,7 +105,7 @@ jobs:
     name: Build Docker Images
     runs-on: ubuntu-latest
     needs: [test-backend, test-frontend]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/temp2-main') && github.event_name == 'push'
 
     steps:
       - name: Checkout repository
@@ -149,7 +149,7 @@ jobs:
     name: Deploy to Production
     runs-on: ubuntu-latest
     needs: [build]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/temp2-main') && github.event_name == 'push'
     environment: production
 
     steps:

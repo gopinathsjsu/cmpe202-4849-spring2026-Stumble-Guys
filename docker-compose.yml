@@ -25,6 +25,8 @@ services:
     restart: unless-stopped
     ports:
       - "3001:3001"
+    env_file:
+      - ./backend/.env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/eventhub
       PORT: "3001"
@@ -36,10 +38,11 @@ services:
   frontend:
     build:
       context: ./frontend
+      dockerfile: Dockerfile_Preetam
     container_name: eventhub-frontend
     restart: unless-stopped
     ports:
-      - "5173:5173"
+      - "80:80"
     depends_on:
       - backend
 
