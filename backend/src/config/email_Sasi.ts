@@ -1,34 +1,16 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-let transporter: nodemailer.Transporter;
+let resendClient: Resend | null = null;
 
-async function createTransporter(): Promise<nodemailer.Transporter> {
-  if (transporter) return transporter;
-
-  if (process.env.NODE_ENV === 'production') {
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-  } else {
-    const testAccount = await nodemailer.createTestAccount();
-    transporter = nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false,
-      auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
-      },
-    });
+export function getResendClient(): Resend {
+  if (!resendClient) {
+    resendClient = new Resend(process.env.RESEND_API_KEY);
   }
-
-  return transporter;
+  return resendClient;
 }
 
-export { createTransporter };
+// Keep createTransporter export so existing emailService_Sasi.ts still compiles
+// (it won't be called when RESEND_API_KEY is set)
+export async function createTransporter() {
+  throw new Error('Use Resend instead of Nodemailer');
+}

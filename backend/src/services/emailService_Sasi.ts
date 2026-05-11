@@ -1,5 +1,4 @@
-import nodemailer from 'nodemailer';
-import { createTransporter } from '../config/email_Sasi';
+import { getResendClient } from '../config/email_Sasi';
 
 export class EmailService {
   private static async sendEmail(
@@ -8,18 +7,10 @@ export class EmailService {
     html: string
   ): Promise<void> {
     try {
-      const transporter = await createTransporter();
-
-      const info = await transporter.sendMail({
-        from: process.env.EMAIL_FROM || '"EventHub" <noreply@eventhub.com>',
-        to,
-        subject,
-        html,
-      });
-
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('Preview URL:', nodemailer.getTestMessageUrl(info));
-      }
+      const resend = getResendClient();
+      const from = process.env.EMAIL_FROM || 'EventHub <onboarding@resend.dev>';
+      const { error } = await resend.emails.send({ from, to, subject, html });
+      if (error) throw new Error(error.message);
     } catch (error) {
       console.error('Failed to send email:', error);
       throw new Error('Email delivery failed');

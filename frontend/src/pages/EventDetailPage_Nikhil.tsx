@@ -504,30 +504,75 @@ const EventDetailPage: React.FC = () => {
           </div>
 
           {/* Map */}
-          {!isOnline && hasLocation && (
+          {!isOnline && (hasLocation || event.google_maps_url) && (
             <div className="mt-10">
               <h2 className="mb-4 text-xl font-bold text-gray-900">
                 Location
               </h2>
-              <div className="h-64 overflow-hidden rounded-xl border border-gray-200">
-                <EventMap
-                  events={[
-                    {
-                      id: event.id,
-                      slug: event.slug || '',
-                      title: event.title,
-                      latitude: Number(event.latitude),
-                      longitude: Number(event.longitude),
-                      start_date: event.start_date,
-                      venue_name: event.venue_name || '',
-                      is_free: event.is_free,
-                      price: eventPrice,
-                    },
-                  ]}
-                  center={[Number(event.latitude), Number(event.longitude)]}
-                  zoom={15}
-                />
-              </div>
+              {event.google_maps_url ? (
+                <div className="overflow-hidden rounded-xl border border-gray-200">
+                  <iframe
+                    title="Event Location"
+                    src={(() => {
+                      const url = event.google_maps_url!;
+                      // Already an embed URL
+                      if (url.includes('google.com/maps/embed')) return url;
+                      if (url.includes('output=embed')) return url;
+                      // Extract query from place URL: google.com/maps/place/Name/@lat,lng,...
+                      const placeMatch = url.match(/\/maps\/place\/([^/@]+)/);
+                      if (placeMatch) {
+                        const place = decodeURIComponent(placeMatch[1]).replace(/\+/g, ' ');
+                        return `https://maps.google.com/maps?q=${encodeURIComponent(place)}&output=embed`;
+                      }
+                      // Extract q= param from standard URL
+                      const qMatch = url.match(/[?&]q=([^&]+)/);
+                      if (qMatch) {
+                        return `https://maps.google.com/maps?q=${qMatch[1]}&output=embed`;
+                      }
+                      // Fallback: append output=embed
+                      const sep = url.includes('?') ? '&' : '?';
+                      return `${url}${sep}output=embed`;
+                    })()}
+                    width="100%"
+                    height="350"
+                    style={{ border: 0 }}
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                  <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 text-sm text-gray-500">
+                    <MapPin className="h-4 w-4" />
+                    <a
+                      href={event.google_maps_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      Open in Google Maps
+                    </a>
+                  </div>
+                </div>
+              ) : hasLocation ? (
+                <div className="h-64 overflow-hidden rounded-xl border border-gray-200">
+                  <EventMap
+                    events={[
+                      {
+                        id: event.id,
+                        slug: event.slug || '',
+                        title: event.title,
+                        latitude: Number(event.latitude),
+                        longitude: Number(event.longitude),
+                        start_date: event.start_date,
+                        venue_name: event.venue_name || '',
+                        is_free: event.is_free,
+                        price: eventPrice,
+                      },
+                    ]}
+                    center={[Number(event.latitude), Number(event.longitude)]}
+                    zoom={15}
+                  />
+                </div>
+              ) : null}
             </div>
           )}
 
