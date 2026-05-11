@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, Controller, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import useEventStore from '../../store/eventStore_Nikhil';
+import { eventApi } from '../../api/eventApi_Nikhil';
+import { useToast } from '../shared/Toast_Sasi';
 import {
   ChevronLeft,
   ChevronRight,
@@ -19,7 +22,7 @@ const eventSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters').max(200),
   description: z.string().min(20, 'Description must be at least 20 characters'),
   short_description: z.string().max(300).optional(),
-  category_id: z.string().min(1, 'Please select a category'),
+  category_id: z.string().uuid('Please select a category'),
   tags: z.string().optional(),
 
   start_date: z.string().min(1, 'Start date is required'),
@@ -33,16 +36,21 @@ const eventSchema = z.object({
   state: z.string().optional(),
   zip_code: z.string().optional(),
   country: z.string().optional(),
+  google_maps_url: z.string().url('Must be a valid Google Maps URL').optional().or(z.literal('')),
   virtual_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
 
-  capacity: z.coerce.number().int().positive().optional(),
+  capacity: z.coerce
+    .number()
+    .int()
+    .min(10, 'Capacity must be at least 10')
+    .max(1000, 'Capacity cannot exceed 1000'),
   is_free: z.boolean(),
   price: z.coerce.number().min(0).optional(),
 
   image_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
 });
 
-type EventFormData = z.infer<typeof eventSchema>;
+export type EventFormData = z.infer<typeof eventSchema>;
 
 interface EventFormProps {
   initialData?: Partial<EventFormData>;
@@ -57,19 +65,6 @@ const STEPS = [
   { id: 'tickets', label: 'Tickets', icon: Ticket },
   { id: 'image', label: 'Image', icon: Image },
 ] as const;
-
-const CATEGORIES = [
-  { id: 'music', name: 'Music' },
-  { id: 'tech', name: 'Technology' },
-  { id: 'business', name: 'Business' },
-  { id: 'sports', name: 'Sports' },
-  { id: 'arts', name: 'Arts' },
-  { id: 'food', name: 'Food & Drink' },
-  { id: 'health', name: 'Health' },
-  { id: 'science', name: 'Science' },
-  { id: 'community', name: 'Community' },
-  { id: 'other', name: 'Other' },
-];
 
 const TIMEZONES = [
   'America/New_York',
@@ -90,7 +85,7 @@ const TIMEZONES = [
 const STEP_FIELDS: Record<number, (keyof EventFormData)[]> = {
   0: ['title', 'description', 'short_description', 'category_id'],
   1: ['start_date', 'end_date', 'timezone'],
-  2: ['is_online', 'venue_name', 'address', 'city', 'state', 'zip_code', 'country', 'virtual_url'],
+  2: ['is_online', 'venue_name', 'address', 'city', 'state', 'zip_code', 'country', 'google_maps_url', 'virtual_url'],
   3: ['capacity', 'is_free', 'price'],
   4: ['image_url'],
 };
@@ -101,11 +96,20 @@ const EventForm: React.FC<EventFormProps> = ({
   isLoading = false,
 }) => {
   const [step, setStep] = useState(0);
+  const { categories, fetchCategories } = useEventStore();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (categories.length === 0) {
+      void fetchCategories();
+    }
+  }, [categories.length, fetchCategories]);
 
   const {
     register,
     handleSubmit,
     control,
+    setValue,
     watch,
     trigger,
     formState: { errors },
@@ -119,7 +123,7 @@ const EventForm: React.FC<EventFormProps> = ({
       tags: '',
       start_date: '',
       end_date: '',
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
+      timezone: 'America/New_York',
       is_online: false,
       venue_name: '',
       address: '',
@@ -127,8 +131,9 @@ const EventForm: React.FC<EventFormProps> = ({
       state: '',
       zip_code: '',
       country: '',
+      google_maps_url: '',
       virtual_url: '',
-      capacity: undefined,
+      capacity: 50,
       is_free: true,
       price: 0,
       image_url: '',
@@ -139,6 +144,8 @@ const EventForm: React.FC<EventFormProps> = ({
   const isOnline = watch('is_online');
   const isFree = watch('is_free');
   const imageUrl = watch('image_url');
+
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const handleNext = async () => {
     const fields = STEP_FIELDS[step];
@@ -284,8 +291,10 @@ const EventForm: React.FC<EventFormProps> = ({
                     : 'border-gray-300 focus:border-orange-500 focus:ring-orange-500/20'
                 )}
               >
-                <option value="">Select a category</option>
-                {CATEGORIES.map((c) => (
+                <option value="">
+                  {categories.length === 0 ? 'Loading categories…' : 'Select a category'}
+                </option>
+                {categories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
@@ -486,6 +495,30 @@ const EventForm: React.FC<EventFormProps> = ({
                     />
                   </div>
                 </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Google Maps Link
+                  </label>
+                  <input
+                    {...register('google_maps_url')}
+                    className={cn(
+                      'block w-full rounded-lg border px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-0',
+                      errors.google_maps_url
+                        ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20'
+                        : 'border-gray-300 focus:border-orange-500 focus:ring-orange-500/20'
+                    )}
+                    placeholder="Paste a Google Maps share link (optional)"
+                  />
+                  {errors.google_maps_url && (
+                    <p className="mt-1 text-sm text-red-500">
+                      {errors.google_maps_url.message}
+                    </p>
+                  )}
+                  <p className="mt-1 text-xs text-gray-500">
+                    If provided, we’ll try to extract coordinates so your event appears on the map.
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -498,15 +531,19 @@ const EventForm: React.FC<EventFormProps> = ({
 
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                Max Capacity
+                Max Capacity *
               </label>
               <input
                 type="number"
                 {...register('capacity')}
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm transition-colors focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:ring-offset-0"
-                placeholder="Leave empty for unlimited"
-                min={1}
+                placeholder="10–1000"
+                min={10}
+                max={1000}
               />
+              {errors.capacity && (
+                <p className="mt-1 text-sm text-red-500">{errors.capacity.message}</p>
+              )}
             </div>
 
             <Controller
@@ -565,6 +602,44 @@ const EventForm: React.FC<EventFormProps> = ({
         {step === 4 && (
           <div className="space-y-5">
             <h2 className="text-lg font-semibold text-gray-900">Cover Image</h2>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                Upload Image
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  try {
+                    setUploadingImage(true);
+                    const res = await eventApi.uploadEventImage(file);
+                    const url = (res?.data?.url ?? res?.data?.data?.url ?? res?.url) as
+                      | string
+                      | undefined;
+                    if (url) {
+                      setValue('image_url', url, { shouldDirty: true, shouldValidate: true });
+                      toast.success('Image uploaded');
+                    }
+                  } catch {
+                    toast.error('Image upload failed');
+                  } finally {
+                    setUploadingImage(false);
+                    // allow re-selecting same file
+                    e.target.value = '';
+                  }
+                }}
+              />
+              {uploadingImage && (
+                <p className="mt-1 text-xs text-gray-500">Uploading…</p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                Or paste an image URL below.
+              </p>
+            </div>
 
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">

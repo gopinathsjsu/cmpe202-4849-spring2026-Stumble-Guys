@@ -9,6 +9,7 @@ export const registerSchema = z.object({
     .regex(/[0-9]/, 'Password must contain at least one number'),
   first_name: z.string().min(1, 'First name is required').max(100),
   last_name: z.string().min(1, 'Last name is required').max(100),
+  role: z.enum(['attendee', 'organizer']).optional(),
 });
 
 export const loginSchema = z.object({

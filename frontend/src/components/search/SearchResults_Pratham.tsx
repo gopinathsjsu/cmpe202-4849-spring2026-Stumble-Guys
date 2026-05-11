@@ -20,21 +20,27 @@ interface SearchEvent {
   venue_name: string;
   city?: string;
   is_free: boolean;
-  price: number;
+  price: number | string;
   image_url?: string;
-  category?: string;
+  category?: string | { name?: string };
 }
 
 type ViewMode = 'grid' | 'list';
 type SortOption = 'relevance' | 'date' | 'price';
 
 interface SearchResultsProps {
-  results: SearchEvent[];
+  results?: SearchEvent[];
+  events?: SearchEvent[];
   isLoading: boolean;
-  query: string;
-  totalResults: number;
+  query?: string;
+  totalResults?: number;
+  totalCount?: number;
   onSortChange?: (sort: SortOption) => void;
   className?: string;
+}
+
+function getCategoryLabel(category: SearchEvent['category']) {
+  return typeof category === 'string' ? category : category?.name;
 }
 
 function SkeletonCard({ view }: { view: ViewMode }) {
@@ -63,15 +69,19 @@ function SkeletonCard({ view }: { view: ViewMode }) {
 }
 
 const SearchResults: React.FC<SearchResultsProps> = ({
-  results,
+  results: resultsProp,
+  events,
   isLoading,
-  query,
+  query = '',
   totalResults,
+  totalCount,
   onSortChange,
   className,
 }) => {
   const [view, setView] = useState<ViewMode>('grid');
   const [sort, setSort] = useState<SortOption>('relevance');
+  const results = resultsProp ?? events ?? [];
+  const resultCount = totalResults ?? totalCount ?? results.length;
 
   const handleSortChange = (newSort: SortOption) => {
     setSort(newSort);
@@ -85,14 +95,12 @@ const SearchResults: React.FC<SearchResultsProps> = ({
         <div>
           {query ? (
             <h2 className="text-sm text-gray-600">
-              <span className="font-bold text-gray-900">{totalResults}</span>{' '}
-              {totalResults === 1 ? 'event' : 'events'} found for{' '}
+              {`${resultCount} ${resultCount === 1 ? 'event' : 'events'} found for `}
               <span className="font-semibold text-orange-600">&lsquo;{query}&rsquo;</span>
             </h2>
           ) : (
             <h2 className="text-sm text-gray-600">
-              <span className="font-bold text-gray-900">{totalResults}</span>{' '}
-              {totalResults === 1 ? 'event' : 'events'} found
+              {`${resultCount} ${resultCount === 1 ? 'event' : 'events'} found`}
             </h2>
           )}
         </div>
@@ -190,9 +198,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({
                 </div>
               )}
               <div className="flex flex-1 flex-col gap-1.5 p-4">
-                {event.category && (
+                {getCategoryLabel(event.category) && (
                   <span className="self-start rounded bg-orange-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orange-600">
-                    {event.category}
+                    {getCategoryLabel(event.category)}
                   </span>
                 )}
                 <h3 className="line-clamp-2 text-sm font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">
@@ -216,7 +224,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
                         : 'bg-orange-100 text-orange-700'
                     )}
                   >
-                    {formatPrice(event.price, event.is_free)}
+                    {formatPrice(Number(event.price), event.is_free)}
                   </span>
                 </div>
               </div>
@@ -246,9 +254,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({
                 </div>
               )}
               <div className="flex min-w-0 flex-1 flex-col gap-1">
-                {event.category && (
+                {getCategoryLabel(event.category) && (
                   <span className="self-start rounded bg-orange-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orange-600">
-                    {event.category}
+                    {getCategoryLabel(event.category)}
                   </span>
                 )}
                 <h3 className="truncate text-sm font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">
@@ -272,7 +280,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
                         : 'bg-orange-100 text-orange-700'
                     )}
                   >
-                    {formatPrice(event.price, event.is_free)}
+                    {formatPrice(Number(event.price), event.is_free)}
                   </span>
                 </div>
               </div>
@@ -285,5 +293,3 @@ const SearchResults: React.FC<SearchResultsProps> = ({
 };
 
 export default SearchResults;
-
-// Enhanced loading states and skeleton UI - Sprint 5

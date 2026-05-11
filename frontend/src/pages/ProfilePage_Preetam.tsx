@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Camera,
   Save,
@@ -11,6 +12,9 @@ import {
   FileText,
   Loader2,
   Shield,
+  CalendarPlus,
+  Link2,
+  Unlink,
 } from 'lucide-react';
 import useAuthStore from '../store/authStore_Preetam';
 import { authApi } from '../api/authApi_Preetam';
@@ -19,6 +23,7 @@ import Button from '../components/shared/Button_Preetam';
 import { useToast } from '../components/shared/Toast_Sasi';
 import { cn } from '../utils/cn_Pratham';
 import { ROLES } from '../utils/constants_Preetam';
+import { integrationsApi } from '../api/integrationsApi_Nikhil';
 
 const ROLE_COLORS: Record<string, string> = {
   [ROLES.ADMIN]: 'bg-red-100 text-red-700',
@@ -29,6 +34,7 @@ const ROLE_COLORS: Record<string, string> = {
 const ProfilePage: React.FC = () => {
   const { user, isLoading, updateProfile, fetchProfile } = useAuthStore();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [firstName, setFirstName] = useState(user?.first_name ?? '');
@@ -42,10 +48,44 @@ const ProfilePage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [gcConfigured, setGcConfigured] = useState(false);
+  const [gcLoading, setGcLoading] = useState(false);
 
   useEffect(() => {
     if (!user) fetchProfile();
   }, [user, fetchProfile]);
+
+  useEffect(() => {
+    const status = searchParams.get('google_calendar');
+    const rawMsg = searchParams.get('message');
+    if (status === 'connected') {
+      toast.success('Google Calendar connected');
+      fetchProfile();
+      searchParams.delete('google_calendar');
+      searchParams.delete('message');
+      setSearchParams(searchParams, { replace: true });
+    } else if (status === 'error') {
+      toast.error(rawMsg ? decodeURIComponent(rawMsg) : 'Could not connect Google Calendar');
+      searchParams.delete('google_calendar');
+      searchParams.delete('message');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, toast, fetchProfile]);
+
+  useEffect(() => {
+    let cancelled = false;
+    integrationsApi
+      .getGoogleCalendarStatus()
+      .then((res) => {
+        if (!cancelled) setGcConfigured(res.data?.configured ?? false);
+      })
+      .catch(() => {
+        if (!cancelled) setGcConfigured(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -112,6 +152,33 @@ const ProfilePage: React.FC = () => {
       toast.error('Failed to upload avatar');
     } finally {
       setUploadingAvatar(false);
+    }
+  };
+
+  const handleConnectGoogleCalendar = async () => {
+    setGcLoading(true);
+    try {
+      const res = await integrationsApi.getGoogleCalendarAuthUrl();
+      const url = res.data?.authUrl;
+      if (url) window.location.href = url;
+      else toast.error('Could not start Google sign-in');
+    } catch {
+      toast.error('Google Calendar is not available');
+    } finally {
+      setGcLoading(false);
+    }
+  };
+
+  const handleDisconnectGoogleCalendar = async () => {
+    setGcLoading(true);
+    try {
+      await integrationsApi.disconnectGoogleCalendar();
+      await fetchProfile();
+      toast.success('Google Calendar disconnected');
+    } catch {
+      toast.error('Could not disconnect');
+    } finally {
+      setGcLoading(false);
     }
   };
 
@@ -246,6 +313,49 @@ const ProfilePage: React.FC = () => {
           </Button>
         </div>
       </form>
+
+      {/* Google Calendar */}
+      {gcConfigured && (
+        <div className="mt-8 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-2 flex items-center gap-2 text-lg font-semibold text-gray-900">
+            <CalendarPlus className="h-5 w-5 text-orange-500" />
+            Google Calendar
+          </h2>
+          <p className="mb-4 text-sm text-gray-600">
+            Connect once to add supported events to your primary Google Calendar from EventHub with one
+            tap. You can always use &quot;Open in Google Calendar&quot; on an event without connecting.
+          </p>
+          {user.google_calendar_connected ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
+                Connected
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                isLoading={gcLoading}
+                onClick={handleDisconnectGoogleCalendar}
+                className="gap-1.5"
+              >
+                <Unlink className="h-4 w-4" />
+                Disconnect
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="primary"
+              isLoading={gcLoading}
+              onClick={handleConnectGoogleCalendar}
+              className="gap-2"
+            >
+              <Link2 className="h-4 w-4" />
+              Connect Google Calendar
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Change Password */}
       <div className="mt-8 rounded-xl border border-gray-200 bg-white shadow-sm">

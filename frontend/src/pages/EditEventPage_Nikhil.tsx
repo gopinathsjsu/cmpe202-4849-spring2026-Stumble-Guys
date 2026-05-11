@@ -7,8 +7,11 @@ import EventForm from '../components/events/EventForm_Nikhil';
 import LoadingSpinner from '../components/shared/LoadingSpinner_Pratham';
 import { useToast } from '../components/shared/Toast_Sasi';
 
+import { mapEventFormToApiPayload } from '../utils/mapEventFormToApi_Nikhil';
+import type { EventFormData } from '../components/events/EventForm_Nikhil';
+
 const EditEventPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, isAdmin } = useAuth();
@@ -17,8 +20,8 @@ const EditEventPage: React.FC = () => {
     useEventStore();
 
   useEffect(() => {
-    if (id) fetchEventBySlug(id);
-  }, [id, fetchEventBySlug]);
+    if (slug) fetchEventBySlug(slug);
+  }, [slug, fetchEventBySlug]);
 
   useEffect(() => {
     if (
@@ -32,10 +35,10 @@ const EditEventPage: React.FC = () => {
     }
   }, [currentEvent, user, isAdmin, navigate, toast]);
 
-  const handleSubmit = async (data: Parameters<typeof updateEvent>[1]) => {
+  const handleSubmit = async (data: EventFormData) => {
     if (!currentEvent) return;
     try {
-      await updateEvent(currentEvent.id, data);
+      await updateEvent(currentEvent.id, mapEventFormToApiPayload(data));
       toast.success('Event updated successfully!');
       navigate(`/events/${currentEvent.slug}`);
     } catch {
@@ -50,20 +53,28 @@ const EditEventPage: React.FC = () => {
   const initialData = {
     title: currentEvent.title,
     description: currentEvent.description,
-    category_id: currentEvent.category_id,
-    start_date: currentEvent.start_date,
-    end_date: currentEvent.end_date,
-    timezone: 'America/New_York',
-    is_online: currentEvent.is_virtual,
+    short_description: currentEvent.short_desc ?? '',
+    category_id: currentEvent.category_id || currentEvent.category?.id || '',
+    start_date: currentEvent.start_date.slice(0, 16),
+    end_date: currentEvent.end_date.slice(0, 16),
+    timezone: currentEvent.timezone ?? 'America/Los_Angeles',
+    is_online:
+      currentEvent.is_online !== undefined
+        ? currentEvent.is_online
+        : currentEvent.is_virtual,
     venue_name: currentEvent.venue_name ?? '',
     address: currentEvent.address ?? '',
     city: currentEvent.city ?? '',
     state: currentEvent.state ?? '',
+    zip_code: currentEvent.zip_code ?? '',
     country: currentEvent.country ?? '',
-    virtual_url: currentEvent.virtual_url ?? '',
-    capacity: currentEvent.max_attendees ?? undefined,
+    virtual_url:
+      currentEvent.online_url ?? currentEvent.virtual_url ?? '',
+    capacity:
+      currentEvent.capacity ?? currentEvent.max_attendees ?? undefined,
     is_free: currentEvent.is_free,
-    image_url: currentEvent.cover_image ?? '',
+    price: Number(currentEvent.price ?? 0),
+    image_url: currentEvent.image_url ?? currentEvent.cover_image ?? '',
   };
 
   return (

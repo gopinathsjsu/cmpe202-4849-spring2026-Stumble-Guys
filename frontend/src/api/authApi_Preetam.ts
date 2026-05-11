@@ -5,7 +5,7 @@ export interface RegisterData {
   password: string;
   first_name: string;
   last_name: string;
-  role?: string;
+  role?: 'attendee' | 'organizer';
 }
 
 export interface LoginData {
@@ -91,6 +91,11 @@ export const authApi = {
     const response = await axiosClient.put(`/users/${id}/status`, {
       is_active: isActive,
     });
+    return response.data;
+  },
+
+  deleteUser: async (id: string) => {
+    const response = await axiosClient.delete(`/users/${id}`);
     return response.data;
   },
 };

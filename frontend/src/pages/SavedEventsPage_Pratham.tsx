@@ -152,5 +152,3 @@ const SavedEventsPage: React.FC = () => {
 };
 
 export default SavedEventsPage;
-
-// Loading and empty state improvements - Sprint 5

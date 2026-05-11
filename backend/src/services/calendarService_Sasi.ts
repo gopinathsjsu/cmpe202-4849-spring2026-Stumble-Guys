@@ -1,28 +1,58 @@
 export class CalendarService {
-  static createIcs(params: {
+  static generateICS(event: {
     title: string;
-    description?: string;
-    start: Date;
-    end: Date;
-    location?: string;
-  }) {
-    const dt = (d: Date) => d.toISOString().replaceAll(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+    description: string;
+    start_date: Date;
+    end_date: Date;
+    venue_name?: string | null;
+    address?: string | null;
+    city?: string | null;
+  }): string {
+    const formatDate = (date: Date): string => {
+      return date
+        .toISOString()
+        .replace(/[-:]/g, '')
+        .replace(/\.\d{3}/, '');
+    };
+
+    const escapeText = (text: string): string => {
+      return text
+        .replace(/\\/g, '\\\\')
+        .replace(/;/g, '\\;')
+        .replace(/,/g, '\\,')
+        .replace(/\n/g, '\\n');
+    };
+
+    const location = [event.venue_name, event.address, event.city]
+      .filter(Boolean)
+      .join(', ');
+
+    const uid = `${Date.now()}-${Math.random().toString(36).substring(2)}@eventhub.com`;
 
     const lines = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//EventHub//EN',
+      'PRODID:-//EventHub//EventHub//EN',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
       'BEGIN:VEVENT',
-      `SUMMARY:${params.title}`,
-      params.description ? `DESCRIPTION:${params.description}` : null,
-      params.location ? `LOCATION:${params.location}` : null,
-      `DTSTART:${dt(params.start)}`,
-      `DTEND:${dt(params.end)}`,
+      `UID:${uid}`,
+      `DTSTART:${formatDate(new Date(event.start_date))}`,
+      `DTEND:${formatDate(new Date(event.end_date))}`,
+      `SUMMARY:${escapeText(event.title)}`,
+      `DESCRIPTION:${escapeText(event.description)}`,
+    ];
+
+    if (location) {
+      lines.push(`LOCATION:${escapeText(location)}`);
+    }
+
+    lines.push(
+      `DTSTAMP:${formatDate(new Date())}`,
       'END:VEVENT',
-      'END:VCALENDAR',
-    ].filter(Boolean);
+      'END:VCALENDAR'
+    );
 
     return lines.join('\r\n');
   }
 }
-

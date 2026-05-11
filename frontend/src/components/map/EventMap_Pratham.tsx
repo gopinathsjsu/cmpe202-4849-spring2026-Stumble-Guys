@@ -22,7 +22,7 @@ interface MapEvent {
   start_date: string;
   venue_name: string;
   is_free: boolean;
-  price: number;
+  price: number | string;
   image_url?: string;
 }
 
@@ -121,7 +121,7 @@ const EventMap: React.FC<EventMapProps> = ({
   );
 
   const validEvents = useMemo(
-    () => events.filter((e) => e.latitude != null && e.longitude != null),
+    () => events.filter((e) => Number.isFinite(Number(e.latitude)) && Number.isFinite(Number(e.longitude))),
     [events]
   );
 
@@ -143,8 +143,8 @@ const EventMap: React.FC<EventMapProps> = ({
         {validEvents.map((event) => (
           <Marker
             key={event.id}
-            position={[event.latitude, event.longitude]}
-            icon={createEventIcon(event.is_free, event.price)}
+            position={[Number(event.latitude), Number(event.longitude)]}
+            icon={createEventIcon(event.is_free, Number(event.price))}
           >
             <Popup maxWidth={280} className="event-popup">
               <div className="flex flex-col gap-2 p-1">
@@ -171,7 +171,7 @@ const EventMap: React.FC<EventMapProps> = ({
                       : 'bg-orange-100 text-orange-700'
                   )}
                 >
-                  {formatPrice(event.price, event.is_free)}
+                  {formatPrice(Number(event.price), event.is_free)}
                 </span>
               </div>
             </Popup>
@@ -183,7 +183,3 @@ const EventMap: React.FC<EventMapProps> = ({
 };
 
 export default EventMap;
-
-// Map bounds change handler - Sprint 4
-
-// Cross-browser compatibility fixes for Safari and Firefox - Sprint 6

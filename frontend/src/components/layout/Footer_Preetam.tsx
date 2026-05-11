@@ -2,13 +2,6 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
 
-const quickLinks = [
-  { label: 'Browse Events', path: '/events' },
-  { label: 'Create Event', path: '/events/create' },
-  { label: 'Pricing', path: '/pricing' },
-  { label: 'Help Center', path: '/help' },
-];
-
 const categories = [
   { label: 'Music', path: '/events?category=music' },
   { label: 'Technology', path: '/events?category=technology' },
@@ -27,7 +20,7 @@ const Footer: React.FC = () => {
   return (
     <footer className="bg-gray-900 text-gray-300">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {/* About */}
           <div>
             <div className="mb-4 flex items-center gap-2">
@@ -38,25 +31,6 @@ const Footer: React.FC = () => {
               Discover and create amazing events. Connect with people who share
               your passions, learn new skills, and build community.
             </p>
-          </div>
-
-          {/* Quick Links */}
-          <div>
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-white">
-              Quick Links
-            </h3>
-            <ul className="space-y-2.5">
-              {quickLinks.map((link) => (
-                <li key={link.path}>
-                  <Link
-                    to={link.path}
-                    className="text-sm transition-colors hover:text-white"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
           </div>
 
           {/* Categories */}

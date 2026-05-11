@@ -106,6 +106,7 @@ describe('Event API', () => {
         ...baseEvent,
         title: 'Summer Music Fest',
         slug: 'summer-music-fest',
+        status: 'pending_approval',
         organizer: { id: organizerId, first_name: 'O', last_name: 'G', avatar_url: null },
         category: null,
       });
@@ -117,7 +118,10 @@ describe('Event API', () => {
 
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
-      expect(res.body.data).toMatchObject({ title: 'Summer Music Fest' });
+      expect(res.body.data).toMatchObject({
+        title: 'Summer Music Fest',
+        status: 'pending_approval',
+      });
     });
 
     it('returns 403 for attendee role', async () => {
