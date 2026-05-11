@@ -21,6 +21,7 @@ export interface CreateEventInput {
   country?: string;
   latitude?: number;
   longitude?: number;
+  google_maps_url?: string;
   is_online?: boolean;
   online_url?: string;
   image_url?: string;
@@ -35,6 +36,8 @@ export type UpdateEventInput = Partial<CreateEventInput>;
 
 export interface EventFilters {
   category_id?: string;
+  /** When set, events must match one of these category UUIDs */
+  category_ids?: string[];
   city?: string;
   start_date?: string;
   end_date?: string;
@@ -60,6 +63,7 @@ export interface EventResponse {
   country: string | null;
   latitude: number | null;
   longitude: number | null;
+  google_maps_url?: string | null;
   is_online: boolean;
   online_url: string | null;
   image_url: string | null;

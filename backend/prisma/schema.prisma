@@ -22,6 +22,8 @@ model User {
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
+  google_calendar_refresh_token String? @db.Text
+
   refresh_tokens  RefreshToken[]
   organized_events Event[]        @relation("OrganizerEvents")
   approved_events  Event[]        @relation("ApprovedEvents")
@@ -30,6 +32,7 @@ model User {
   notifications    Notification[]
   saved_events     SavedEvent[]
   event_views      EventView[]
+  event_updates    EventUpdate[]
 
   @@map("users")
 }
@@ -76,6 +79,7 @@ model Event {
   country        String    @default("US")
   latitude       Decimal?  @db.Decimal(10, 7)
   longitude      Decimal?  @db.Decimal(10, 7)
+  google_maps_url String?
   is_online      Boolean   @default(false)
   online_url     String?
   image_url      String?
@@ -97,6 +101,7 @@ model Event {
   ticket_types TicketType[]
   tickets      Ticket[]
   rsvps        Rsvp[]
+  updates      EventUpdate[]
   notifications Notification[]
   saved_events  SavedEvent[]
   event_views   EventView[]
@@ -105,6 +110,20 @@ model Event {
   @@index([status])
   @@index([category_id])
   @@map("events")
+}
+
+model EventUpdate {
+  id         String   @id @default(uuid()) @db.Uuid
+  event_id   String   @db.Uuid
+  author_id  String   @db.Uuid
+  message    String   @db.Text
+  created_at DateTime @default(now())
+
+  event  Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  author User  @relation(fields: [author_id], references: [id])
+
+  @@index([event_id, created_at])
+  @@map("event_updates")
 }
 
 model TicketType {
@@ -145,18 +164,20 @@ model Ticket {
 }
 
 model Rsvp {
-  id         String   @id @default(uuid()) @db.Uuid
-  event_id   String   @db.Uuid
-  user_id    String   @db.Uuid
-  status     String   @default("going")
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  id              String   @id @default(uuid()) @db.Uuid
+  event_id        String   @db.Uuid
+  user_id         String   @db.Uuid
+  status          String   @default("going")
+  approval_status String   @default("not_required")
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
 
   event Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [user_id], references: [id])
 
   @@unique([event_id, user_id])
   @@index([event_id])
+  @@index([approval_status])
   @@map("rsvps")
 }
 

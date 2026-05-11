@@ -1,18 +1,19 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { LayoutGrid, List } from 'lucide-react';
 import useEventStore from '../store/eventStore_Nikhil';
 import CategoryFilter from '../components/events/CategoryFilter_Nikhil';
-import FilterPanel from '../components/search/FilterPanel_Pratham';
+import FilterPanel, {
+  type BrowsePanelFilters,
+} from '../components/search/FilterPanel_Pratham';
 import EventGrid from '../components/events/EventGrid_Nikhil';
 import Pagination from '../components/shared/Pagination_Pratham';
-import { cn } from '../utils/cn_Pratham';
 
-interface PanelFilters {
-  category: string;
-  dateRange: { start: string; end: string };
-  isFree: 'all' | 'free' | 'paid';
-  city: string;
+function parseCategoryIdsFromSearchParams(searchParams: URLSearchParams): string[] {
+  const multi = searchParams.get('categories');
+  if (multi) return multi.split(',').map((s) => s.trim()).filter(Boolean);
+  const one = searchParams.get('category');
+  if (one) return one.split(',').map((s) => s.trim()).filter(Boolean);
+  return [];
 }
 
 const EventListPage: React.FC = () => {
@@ -26,15 +27,12 @@ const EventListPage: React.FC = () => {
     fetchCategories,
   } = useEventStore();
 
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(
-    searchParams.get('category') ?? null
-  );
-  const [panelFilters, setPanelFilters] = useState<PanelFilters>({
-    category: '',
+  const [panelFilters, setPanelFilters] = useState<BrowsePanelFilters>(() => ({
+    categoryIds: parseCategoryIdsFromSearchParams(searchParams),
     dateRange: { start: '', end: '' },
     isFree: 'all',
     city: searchParams.get('city') ?? '',
-  });
+  }));
 
   useEffect(() => {
     fetchCategories();
@@ -48,8 +46,14 @@ const EventListPage: React.FC = () => {
         limit: 12,
       };
 
-      if (selectedCategory) params.category = selectedCategory;
-      if (panelFilters.city) params.city = panelFilters.city;
+      const ids = panelFilters.categoryIds;
+      if (ids.length === 1) {
+        params.category = ids[0];
+      } else if (ids.length > 1) {
+        params.category_ids = ids.join(',');
+      }
+
+      if (panelFilters.city.trim()) params.city = panelFilters.city.trim();
       if (panelFilters.dateRange.start)
         params.start_date = panelFilters.dateRange.start;
       if (panelFilters.dateRange.end)
@@ -62,23 +66,45 @@ const EventListPage: React.FC = () => {
 
       fetchEvents(params as Parameters<typeof fetchEvents>[0]);
     },
-    [selectedCategory, panelFilters, searchParams, fetchEvents]
+    [panelFilters, searchParams, fetchEvents]
   );
 
   useEffect(() => {
     loadEvents(1);
   }, [loadEvents]);
 
-  const handleCategorySelect = (catId: string | null) => {
-    setSelectedCategory(catId);
-    const next = new URLSearchParams(searchParams);
-    if (catId) next.set('category', catId);
-    else next.delete('category');
-    setSearchParams(next, { replace: true });
+  const writeBrowseParams = useCallback(
+    (filters: BrowsePanelFilters) => {
+      const next = new URLSearchParams(searchParams);
+      const ids = filters.categoryIds;
+      if (ids.length === 0) {
+        next.delete('category');
+        next.delete('categories');
+      } else if (ids.length === 1) {
+        next.set('category', ids[0]);
+        next.delete('categories');
+      } else {
+        next.delete('category');
+        next.set('categories', ids.join(','));
+      }
+      if (filters.city.trim()) next.set('city', filters.city.trim());
+      else next.delete('city');
+      setSearchParams(next, { replace: true });
+    },
+    [searchParams, setSearchParams]
+  );
+
+  const handleCategoryPillSelect = (catId: string | null) => {
+    setPanelFilters((p) => {
+      const nextFilters = { ...p, categoryIds: catId ? [catId] : [] };
+      writeBrowseParams(nextFilters);
+      return nextFilters;
+    });
   };
 
-  const handleFilterChange = (filters: PanelFilters) => {
+  const handlePanelFilterChange = (filters: BrowsePanelFilters) => {
     setPanelFilters(filters);
+    writeBrowseParams(filters);
   };
 
   const handlePageChange = (page: number) => {
@@ -86,7 +112,13 @@ const EventListPage: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const categoryNames = categories.map((c) => c.name);
+  const categoryOptions = useMemo(
+    () => categories.map((c) => ({ id: c.id, name: c.name, slug: c.slug })),
+    [categories]
+  );
+
+  const pillSelectedId =
+    panelFilters.categoryIds.length === 1 ? panelFilters.categoryIds[0] : null;
 
   const eventCards = events.map((e) => ({
     id: e.id,
@@ -97,8 +129,9 @@ const EventListPage: React.FC = () => {
     venue_name: e.venue_name ?? undefined,
     city: e.city ?? undefined,
     is_free: e.is_free,
-    image_url: e.cover_image ?? undefined,
-    is_online: e.is_virtual,
+    price: Number(e.price ?? 0),
+    image_url: e.image_url ?? e.cover_image ?? undefined,
+    is_online: e.is_online ?? e.is_virtual,
     category: e.category ? { id: e.category.id, name: e.category.name } : undefined,
     organizer: {
       id: e.organizer?.id ?? e.organizer_id,
@@ -110,9 +143,8 @@ const EventListPage: React.FC = () => {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Discover Events</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Browse Events</h1>
         <p className="mt-1 text-sm text-gray-500">
           {pagination.total > 0
             ? `${pagination.total} event${pagination.total !== 1 ? 's' : ''} found`
@@ -120,29 +152,21 @@ const EventListPage: React.FC = () => {
         </p>
       </div>
 
-      {/* Category pills */}
       <div className="mb-6">
         <CategoryFilter
-          categories={categories.map((c) => ({
-            id: c.slug,
-            name: c.name,
-            slug: c.slug,
-          }))}
-          selectedCategory={selectedCategory}
-          onSelect={handleCategorySelect}
+          categories={categoryOptions}
+          selectedCategory={pillSelectedId}
+          onSelect={handleCategoryPillSelect}
         />
       </div>
 
-      {/* Content */}
       <div className="flex gap-8">
-        {/* Filter sidebar */}
         <FilterPanel
           filters={panelFilters}
-          categories={categoryNames}
-          onFilterChange={handleFilterChange}
+          categories={categoryOptions}
+          onFilterChange={handlePanelFilterChange}
         />
 
-        {/* Main grid */}
         <div className="min-w-0 flex-1">
           <EventGrid
             events={eventCards}

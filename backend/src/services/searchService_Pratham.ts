@@ -25,9 +25,20 @@ export class SearchService {
     }
 
     if (query.category) {
-      conditions.push(`"category_id" = $${paramIndex}`);
-      params.push(query.category);
-      paramIndex++;
+      const catIds = query.category
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (catIds.length === 1) {
+        conditions.push(`"category_id" = $${paramIndex}`);
+        params.push(catIds[0]);
+        paramIndex++;
+      } else if (catIds.length > 1) {
+        const ph = catIds.map((_, i) => `$${paramIndex + i}`).join(', ');
+        conditions.push(`"category_id" IN (${ph})`);
+        params.push(...catIds);
+        paramIndex += catIds.length;
+      }
     }
 
     if (query.city) {
@@ -137,7 +148,3 @@ export class SearchService {
     });
   }
 }
-
-// Trending events support added - Sprint 4
-
-// Performance optimizations: query caching and index hints - Sprint 6

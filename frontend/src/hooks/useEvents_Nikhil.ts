@@ -7,7 +7,7 @@ export function useEvents(filters?: EventFilters) {
 
   const refetch = useCallback(
     (overrides?: EventFilters) => {
-      return fetchEvents({ ...filters, ...overrides });
+      fetchEvents({ ...filters, ...overrides });
     },
     [fetchEvents, filters]
   );

@@ -1,5 +1,11 @@
+/**
+ * In dev, default to same-origin `/api/v1` so Vite proxies to the backend (see vite.config.ts).
+ * That avoids CORS issues when the app is opened as http://127.0.0.1:5173 vs http://localhost:5173.
+ * Set VITE_API_URL to override (e.g. production backend URL).
+ */
 export const API_URL =
-  import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? '/api/v1' : 'http://localhost:3001/api/v1');
 
 export const APP_NAME = 'EventHub';
 

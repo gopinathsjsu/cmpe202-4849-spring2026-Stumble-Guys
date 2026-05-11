@@ -52,7 +52,7 @@ const strengthColors = [
   'bg-green-500',
 ];
 
-const RegisterForm: React.FC = () => {
+const RegisterForm: React.FC<{ role?: 'attendee' | 'organizer' }> = ({ role }) => {
   const { register: authRegister, isLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -79,6 +79,7 @@ const RegisterForm: React.FC = () => {
         password: data.password,
         first_name: data.first_name,
         last_name: data.last_name,
+        role,
       });
       toast.success('Account created successfully!');
       navigate('/', { replace: true });
@@ -94,13 +95,13 @@ const RegisterForm: React.FC = () => {
     <div className="mx-auto w-full max-w-md">
       <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Create account</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Create your account</h1>
           <p className="mt-2 text-sm text-gray-500">
             Join EventHub and discover events near you
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="First name"

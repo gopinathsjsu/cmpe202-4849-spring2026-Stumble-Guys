@@ -19,7 +19,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
   action,
 }) => {
   return (
-    <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
+    <div className="flex flex-col items-center justify-center py-16 text-center">
       <div className="mb-4 rounded-full bg-gray-100 p-4">
         <Icon className="h-10 w-10 text-gray-400" />
       </div>

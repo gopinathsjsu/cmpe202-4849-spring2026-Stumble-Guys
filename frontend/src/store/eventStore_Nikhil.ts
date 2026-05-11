@@ -6,23 +6,33 @@ export interface EventType {
   title: string;
   slug: string;
   description: string;
-  category_id: string;
+  short_desc?: string | null;
+  category_id?: string | null;
   organizer_id: string;
   venue_name: string | null;
   address: string | null;
   city: string | null;
   state: string | null;
+  zip_code?: string | null;
   country: string | null;
+  timezone?: string;
   latitude: number | null;
   longitude: number | null;
+  google_maps_url?: string | null;
   start_date: string;
   end_date: string;
   is_free: boolean;
+  price?: number | string;
   max_attendees: number | null;
+  capacity?: number | null;
   cover_image: string | null;
+  image_url?: string | null;
   status: string;
+  approval_notes?: string | null;
   is_virtual: boolean;
+  is_online?: boolean;
   virtual_url: string | null;
+  online_url?: string | null;
   created_at: string;
   updated_at: string;
   organizer?: {
@@ -84,6 +94,43 @@ const defaultPagination: Pagination = {
   totalPages: 0,
 };
 
+function getListPayload<T>(payload: unknown): T[] {
+  if (Array.isArray(payload)) return payload as T[];
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    Array.isArray((payload as { events?: unknown }).events)
+  ) {
+    return (payload as { events: T[] }).events;
+  }
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    Array.isArray((payload as { categories?: unknown }).categories)
+  ) {
+    return (payload as { categories: T[] }).categories;
+  }
+  return [];
+}
+
+function getPaginationPayload(payload: unknown, fallback?: unknown): Pagination {
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    (payload as { pagination?: Pagination }).pagination
+  ) {
+    return (payload as { pagination: Pagination }).pagination;
+  }
+  if (
+    fallback &&
+    typeof fallback === 'object' &&
+    (fallback as { pagination?: Pagination }).pagination
+  ) {
+    return (fallback as { pagination: Pagination }).pagination;
+  }
+  return defaultPagination;
+}
+
 const useEventStore = create<EventState>((set, get) => ({
   events: [],
   currentEvent: null,
@@ -98,8 +145,8 @@ const useEventStore = create<EventState>((set, get) => ({
       const mergedFilters = { ...get().filters, ...filters };
       const data = await eventApi.getEvents(mergedFilters);
       set({
-        events: data.data.events,
-        pagination: data.data.pagination ?? defaultPagination,
+        events: getListPayload<EventType>(data.data),
+        pagination: getPaginationPayload(data.data, data),
         isLoading: false,
       });
     } catch (error) {
@@ -169,7 +216,7 @@ const useEventStore = create<EventState>((set, get) => ({
   fetchCategories: async () => {
     try {
       const data = await eventApi.getCategories();
-      set({ categories: data.data });
+      set({ categories: getListPayload<CategoryType>(data.data) });
     } catch (error) {
       throw error;
     }
@@ -180,8 +227,8 @@ const useEventStore = create<EventState>((set, get) => ({
     try {
       const data = await eventApi.getMyEvents(params);
       set({
-        events: data.data.events,
-        pagination: data.data.pagination ?? defaultPagination,
+        events: getListPayload<EventType>(data.data),
+        pagination: getPaginationPayload(data.data, data),
         isLoading: false,
       });
     } catch (error) {
@@ -210,7 +257,7 @@ const useEventStore = create<EventState>((set, get) => ({
   },
 
   clearFilters: () => {
-    set({ filters: {}, events: [], pagination: { ...defaultPagination } });
+    set({ filters: {}, pagination: { ...defaultPagination } });
   },
 }));
 

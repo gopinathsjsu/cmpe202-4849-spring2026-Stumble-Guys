@@ -12,6 +12,7 @@ export interface UserType {
   bio: string | null;
   is_verified: boolean;
   created_at: string;
+  google_calendar_connected?: boolean;
 }
 
 interface AuthState {
@@ -28,7 +29,7 @@ interface AuthState {
     password: string;
     first_name: string;
     last_name: string;
-    role?: string;
+    role?: 'attendee' | 'organizer';
   }) => Promise<void>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<string>;

@@ -3,6 +3,7 @@ export interface RegisterInput {
   password: string;
   first_name: string;
   last_name: string;
+  role?: 'attendee' | 'organizer';
 }
 
 export interface LoginInput {
@@ -21,6 +22,8 @@ export interface UserResponse {
   bio: string | null;
   is_verified: boolean;
   created_at: Date;
+  /** True when the user has completed Google Calendar OAuth (refresh token stored). */
+  google_calendar_connected?: boolean;
 }
 
 export interface AuthResponse {

@@ -3,15 +3,18 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Bell,
   User,
+  Users,
   Menu,
   X,
   LogOut,
   Calendar,
   Ticket,
-  Settings,
   LayoutDashboard,
   Search,
   MapPin,
+  UserCheck,
+  Layers,
+  Shield,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth_Preetam';
 import useNotificationStore from '../../store/notificationStore_Sasi';
@@ -24,9 +27,23 @@ const navLinks = [
   { label: 'Search', path: '/search', icon: Search },
 ];
 
+const organizerNavLinks = [
+  { label: 'Dashboard', path: '/organizer', icon: LayoutDashboard },
+  { label: 'RSVP queue', path: '/organizer/rsvps', icon: UserCheck },
+  { label: 'My Events', path: '/my-events', icon: Calendar },
+];
+
+const adminNavLinks = [
+  { label: 'Dashboard', path: '/admin', icon: LayoutDashboard },
+  { label: 'Review', path: '/admin/events', icon: Shield },
+  { label: 'Users', path: '/admin/users', icon: Users },
+  { label: 'Categories', path: '/admin/categories', icon: Layers },
+];
+
 const Navbar: React.FC = () => {
-  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, isOrganizer, logout } = useAuth();
   const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
   const navigate = useNavigate();
 
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -46,6 +63,12 @@ const Navbar: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    // Populate unread badge. Best-effort; avoid breaking navigation on failures.
+    fetchNotifications({ page: 1, limit: 25 }).catch(() => undefined);
+  }, [isAuthenticated, fetchNotifications]);
+
   const handleLogout = async () => {
     await logout();
     setDropdownOpen(false);
@@ -55,35 +78,88 @@ const Navbar: React.FC = () => {
 
   const userMenuItems = [
     { label: 'Profile', path: '/profile', icon: User },
-    { label: 'My Events', path: '/my-events', icon: Calendar },
-    { label: 'My Tickets', path: '/my-tickets', icon: Ticket },
-    ...(isAdmin
-      ? [{ label: 'Admin Dashboard', path: '/admin', icon: LayoutDashboard }]
+    ...(isOrganizer
+      ? [
+          { label: 'Dashboard', path: '/organizer', icon: LayoutDashboard },
+          { label: 'RSVP queue', path: '/organizer/rsvps', icon: UserCheck },
+        ]
       : []),
-    { label: 'Settings', path: '/settings', icon: Settings },
+    ...(isOrganizer ? [{ label: 'My Events', path: '/my-events', icon: Calendar }] : []),
+    ...(!isOrganizer && !isAdmin
+      ? [{ label: 'My Tickets', path: '/my-tickets', icon: Ticket }]
+      : []),
+    ...(isAdmin
+      ? [
+          { label: 'Dashboard', path: '/admin', icon: LayoutDashboard },
+          { label: 'Review', path: '/admin/events', icon: Shield },
+          { label: 'Users', path: '/admin/users', icon: Users },
+          { label: 'Categories', path: '/admin/categories', icon: Layers },
+        ]
+      : []),
   ];
 
   return (
     <header className="sticky top-0 z-40 border-b border-gray-200 bg-white shadow-sm">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
+        <Link
+          to={
+            isAuthenticated && isAdmin
+              ? '/admin'
+              : isAuthenticated && isOrganizer
+                ? '/organizer'
+                : '/'
+          }
+          className="flex items-center gap-2"
+        >
           <Calendar className="h-7 w-7 text-orange-500" />
           <span className="text-xl font-bold text-gray-900">EventHub</span>
         </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden items-center gap-1 md:flex">
-          {navLinks.map((link) => (
+        {isOrganizer ? (
+          <nav className="hidden items-center gap-1 md:flex">
+            {organizerNavLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
+              >
+                {link.label}
+              </Link>
+            ))}
             <Link
-              key={link.path}
-              to={link.path}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
+              to="/events/create"
+              className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-white hover:bg-orange-600"
             >
-              {link.label}
+              Create Event
             </Link>
-          ))}
-        </nav>
+          </nav>
+        ) : isAdmin ? (
+          <nav className="hidden items-center gap-1 md:flex">
+            {adminNavLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+        ) : (
+          <nav className="hidden items-center gap-1 md:flex">
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+        )}
 
         {/* Desktop Right */}
         <div className="hidden items-center gap-3 md:flex">
@@ -177,19 +253,57 @@ const Navbar: React.FC = () => {
       {/* Mobile Menu */}
       {mobileOpen && (
         <div className="border-t border-gray-200 bg-white md:hidden">
-          <nav className="space-y-1 px-4 py-3">
-            {navLinks.map((link) => (
+          {isOrganizer ? (
+            <nav className="space-y-1 px-4 py-3">
+              {organizerNavLinks.map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
+                >
+                  <link.icon className="h-4 w-4" />
+                  {link.label}
+                </Link>
+              ))}
               <Link
-                key={link.path}
-                to={link.path}
+                to="/events/create"
                 onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
+                className="flex items-center gap-3 rounded-lg bg-orange-500 px-3 py-2.5 text-sm font-semibold text-white hover:bg-orange-600"
               >
-                <link.icon className="h-4 w-4" />
-                {link.label}
+                <Calendar className="h-4 w-4" />
+                Create Event
               </Link>
-            ))}
-          </nav>
+            </nav>
+          ) : isAdmin ? (
+            <nav className="space-y-1 px-4 py-3">
+              {adminNavLinks.map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
+                >
+                  <link.icon className="h-4 w-4" />
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          ) : (
+            <nav className="space-y-1 px-4 py-3">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100"
+                >
+                  <link.icon className="h-4 w-4" />
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          )}
 
           <div className="border-t px-4 py-3">
             {isAuthenticated ? (

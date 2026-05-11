@@ -3,10 +3,11 @@ import {
   Users,
   Search,
   ChevronDown,
-  Shield,
   UserCheck,
   UserX,
+  Trash2,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { cn } from '../utils/cn_Pratham';
 import { formatDate } from '../utils/formatDate_Sasi';
 import Button from '../components/shared/Button_Preetam';
@@ -14,6 +15,9 @@ import Pagination from '../components/shared/Pagination_Pratham';
 import LoadingSpinner from '../components/shared/LoadingSpinner_Pratham';
 import { authApi, type UsersParams } from '../api/authApi_Preetam';
 import { ROLES } from '../utils/constants_Preetam';
+import RoleGuard from '../components/auth/RoleGuard_Preetam';
+import { useToastStore } from '../components/shared/Toast_Sasi';
+import { getApiErrorMessage } from '../utils/apiError_Pratham';
 
 interface UserRecord {
   id: string;
@@ -38,6 +42,17 @@ const ROLE_BADGE: Record<string, { label: string; className: string }> = {
   organizer: { label: 'Organizer', className: 'bg-purple-100 text-purple-700' },
   attendee: { label: 'Attendee', className: 'bg-blue-100 text-blue-700' },
 };
+
+function parseUsersEnvelope(raw: unknown): UserRecord[] {
+  if (!raw || typeof raw !== 'object') return [];
+  const root = raw as Record<string, unknown>;
+  const inner = root.data;
+  if (Array.isArray(inner)) return inner as UserRecord[];
+  if (inner && typeof inner === 'object' && Array.isArray((inner as { users?: unknown }).users)) {
+    return (inner as { users: UserRecord[] }).users;
+  }
+  return [];
+}
 
 function SkeletonRow() {
   return (
@@ -67,10 +82,14 @@ const AdminUsersPage: React.FC = () => {
       if (roleFilter) params.role = roleFilter;
       if (searchQuery) params.search = searchQuery;
       const data = await authApi.getUsers(params);
-      setUsers(data.data?.users ?? data.data ?? []);
-      setTotalPages(data.data?.pagination?.totalPages ?? 1);
-    } catch {
-      // silent
+      setUsers(parseUsersEnvelope(data));
+      const pag = (data as { pagination?: { totalPages?: number } }).pagination;
+      setTotalPages(pag?.totalPages ?? 1);
+    } catch (err) {
+      useToastStore.getState().addToast(
+        'error',
+        getApiErrorMessage(err, 'Failed to load users')
+      );
     } finally {
       setIsLoading(false);
     }
@@ -85,11 +104,15 @@ const AdminUsersPage: React.FC = () => {
       setUpdatingId(userId);
       try {
         await authApi.updateUserRole(userId, newRole);
+        useToastStore.getState().addToast('success', 'Role updated');
         setUsers((prev) =>
           prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
         );
-      } catch {
-        // silent
+      } catch (err) {
+        useToastStore.getState().addToast(
+          'error',
+          getApiErrorMessage(err, 'Could not update role')
+        );
       } finally {
         setUpdatingId(null);
       }
@@ -102,13 +125,46 @@ const AdminUsersPage: React.FC = () => {
       setUpdatingId(userId);
       try {
         await authApi.updateUserStatus(userId, !currentActive);
+        useToastStore.getState().addToast(
+          'success',
+          !currentActive ? 'Account activated' : 'Account deactivated — sessions revoked'
+        );
         setUsers((prev) =>
           prev.map((u) =>
             u.id === userId ? { ...u, is_active: !currentActive } : u
           )
         );
-      } catch {
-        // silent
+      } catch (err) {
+        useToastStore.getState().addToast(
+          'error',
+          getApiErrorMessage(err, 'Could not update status')
+        );
+      } finally {
+        setUpdatingId(null);
+      }
+    },
+    []
+  );
+
+  const handleDeleteUser = useCallback(
+    async (userId: string, email: string) => {
+      if (
+        !window.confirm(
+          `Permanently delete ${email}? This removes their profile, tickets, and RSVPs. Organized events are removed. This cannot be undone.`
+        )
+      ) {
+        return;
+      }
+      setUpdatingId(userId);
+      try {
+        await authApi.deleteUser(userId);
+        useToastStore.getState().addToast('success', 'User deleted');
+        setUsers((prev) => prev.filter((u) => u.id !== userId));
+      } catch (err) {
+        useToastStore.getState().addToast(
+          'error',
+          getApiErrorMessage(err, 'Could not delete user')
+        );
       } finally {
         setUpdatingId(null);
       }
@@ -117,15 +173,22 @@ const AdminUsersPage: React.FC = () => {
   );
 
   return (
+    <RoleGuard allowedRoles={[ROLES.ADMIN]} redirectTo="/">
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <Link
+        to="/admin"
+        className="mb-6 inline-block text-sm font-medium text-orange-600 hover:text-orange-700"
+      >
+        ← Dashboard
+      </Link>
       {/* Header */}
       <div className="mb-8 flex flex-col gap-1">
         <h1 className="flex items-center gap-2.5 text-2xl font-bold text-gray-900 sm:text-3xl">
           <Users className="h-7 w-7 text-orange-500" />
-          User Management
+          Users
         </h1>
         <p className="text-sm text-gray-500">
-          Manage users, assign roles, and control access.
+          Filter by role, suspend accounts, change roles, or delete users.
         </p>
       </div>
 
@@ -313,13 +376,27 @@ const AdminUsersPage: React.FC = () => {
                                 ? 'border-red-200 text-red-500 hover:bg-red-50'
                                 : 'border-green-200 text-green-500 hover:bg-green-50'
                             )}
-                            title={user.is_active ? 'Deactivate' : 'Activate'}
+                            title={
+                              user.is_active
+                                ? 'Suspend / deactivate account'
+                                : 'Reactivate account'
+                            }
                           >
                             {user.is_active ? (
                               <UserX className="h-3.5 w-3.5" />
                             ) : (
                               <UserCheck className="h-3.5 w-3.5" />
                             )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUser(user.id, user.email)}
+                            disabled={isUpdating}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                            title="Permanently delete account"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </td>
@@ -342,6 +419,7 @@ const AdminUsersPage: React.FC = () => {
         </div>
       )}
     </div>
+    </RoleGuard>
   );
 };
 

@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, CheckCircle } from 'lucide-react';
 import RegisterForm from '../components/auth/RegisterForm_Preetam';
 import { APP_NAME } from '../utils/constants_Preetam';
+import { cn } from '../utils/cn_Pratham';
 
 const BENEFITS = [
   'Browse thousands of events for free',
@@ -13,6 +14,7 @@ const BENEFITS = [
 ];
 
 const RegisterPage: React.FC = () => {
+  const [role, setRole] = useState<'attendee' | 'organizer'>('attendee');
   return (
     <div className="flex min-h-[calc(100vh-64px)]">
       {/* Left decorative panel */}
@@ -75,7 +77,41 @@ const RegisterPage: React.FC = () => {
           </p>
 
           <div className="mt-8">
-            <RegisterForm />
+            <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+              <p className="mb-3 text-sm font-semibold text-gray-900">
+                Sign up as
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRole('attendee')}
+                  className={cn(
+                    'rounded-xl border px-3 py-2 text-sm font-medium transition-colors',
+                    role === 'attendee'
+                      ? 'border-orange-200 bg-orange-50 text-orange-700'
+                      : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                  )}
+                >
+                  Attendee
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('organizer')}
+                  className={cn(
+                    'rounded-xl border px-3 py-2 text-sm font-medium transition-colors',
+                    role === 'organizer'
+                      ? 'border-orange-200 bg-orange-50 text-orange-700'
+                      : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                  )}
+                >
+                  Organizer
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                Organizers can create and manage events. Attendees can browse and book tickets.
+              </p>
+            </div>
+            <RegisterForm role={role} />
           </div>
         </div>
       </div>

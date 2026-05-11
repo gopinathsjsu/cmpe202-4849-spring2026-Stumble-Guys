@@ -18,8 +18,6 @@ import {
   PartyPopper,
 } from 'lucide-react';
 import useEventStore, { type CategoryType } from '../store/eventStore_Nikhil';
-import useSearchStore from '../store/searchStore_Pratham';
-import TrendingSection from '../components/search/TrendingSection_Pratham';
 import EventGrid from '../components/events/EventGrid_Nikhil';
 import { APP_NAME } from '../utils/constants_Preetam';
 import { useAuth } from '../hooks/useAuth_Preetam';
@@ -67,19 +65,22 @@ const HomePage: React.FC = () => {
 
   const { events, categories, isLoading, fetchEvents, fetchCategories } =
     useEventStore();
-  const {
-    trending,
-    isLoading: trendingLoading,
-    fetchTrending,
-  } = useSearchStore();
+  // Search store intentionally unused on home (trending removed).
 
   const [searchTerm, setSearchTerm] = React.useState('');
 
   useEffect(() => {
-    fetchEvents({ status: 'approved', limit: 10 });
+    if (isAuthenticated && isAdmin) {
+      navigate('/admin', { replace: true });
+      return;
+    }
+    if (isAuthenticated && isOrganizer) {
+      navigate('/organizer', { replace: true });
+      return;
+    }
+    fetchEvents({ status: 'approved', limit: 8 });
     fetchCategories();
-    fetchTrending();
-  }, [fetchEvents, fetchCategories, fetchTrending]);
+  }, [fetchEvents, fetchCategories, isAuthenticated, isOrganizer, isAdmin, navigate]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,8 +98,9 @@ const HomePage: React.FC = () => {
     venue_name: e.venue_name ?? undefined,
     city: e.city ?? undefined,
     is_free: e.is_free,
-    image_url: e.cover_image ?? undefined,
-    is_online: e.is_virtual,
+    price: Number(e.price ?? 0),
+    image_url: e.image_url ?? e.cover_image ?? undefined,
+    is_online: e.is_online ?? e.is_virtual,
     category: e.category ? { id: e.category.id, name: e.category.name } : undefined,
     organizer: {
       id: e.organizer?.id ?? e.organizer_id,
@@ -106,17 +108,6 @@ const HomePage: React.FC = () => {
       last_name: e.organizer?.last_name ?? 'Organizer',
       avatar_url: e.organizer?.avatar_url ?? undefined,
     },
-  }));
-
-  const trendingCards = trending.map((e) => ({
-    id: e.id,
-    slug: e.slug,
-    title: e.title,
-    start_date: e.start_date,
-    venue_name: e.venue_name ?? '',
-    is_free: e.is_free,
-    price: 0,
-    image_url: e.cover_image ?? undefined,
   }));
 
   return (
@@ -147,7 +138,6 @@ const HomePage: React.FC = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search events, categories, or cities..."
-                  aria-label="Search events"
                   className="w-full py-4 text-sm text-gray-900 placeholder-gray-400 focus:outline-none"
                 />
               </div>
@@ -230,14 +220,6 @@ const HomePage: React.FC = () => {
             emptyMessage="No upcoming events yet. Check back soon!"
           />
         </div>
-      </section>
-
-      {/* Trending */}
-      <section className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <TrendingSection
-          events={trendingCards}
-          isLoading={trendingLoading}
-        />
       </section>
 
       {/* How It Works */}

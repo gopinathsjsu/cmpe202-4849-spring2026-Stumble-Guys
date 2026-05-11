@@ -1,11 +1,24 @@
+import { useEffect } from 'react';
 import useTicketStore from '../store/ticketStore_Sasi';
 
-export function useTickets() {
-  const isLoading = useTicketStore((s) => s.isLoading);
-  const lastPurchase = useTicketStore((s) => s.lastPurchase);
-  const purchaseTickets = useTicketStore((s) => s.purchaseTickets);
-  const rsvp = useTicketStore((s) => s.rsvp);
+export function useMyTickets() {
+  const { myTickets, isLoading, fetchMyTickets } = useTicketStore();
 
-  return { isLoading, lastPurchase, purchaseTickets, rsvp };
+  useEffect(() => {
+    fetchMyTickets();
+  }, [fetchMyTickets]);
+
+  return { tickets: myTickets, isLoading, refetch: fetchMyTickets };
 }
 
+export function useTicketTypes(eventId: string) {
+  const { ticketTypes, isLoading, fetchTicketTypes } = useTicketStore();
+
+  useEffect(() => {
+    if (eventId) {
+      fetchTicketTypes(eventId);
+    }
+  }, [eventId, fetchTicketTypes]);
+
+  return { ticketTypes, isLoading };
+}

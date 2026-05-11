@@ -1,7 +1,5 @@
-import { randomUUID } from 'crypto';
-
 export function generateTicketNumber(): string {
-  // Short, unique-enough identifier for demo use.
-  return `TKT-${randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`;
+  const year = new Date().getFullYear();
+  const random = Math.floor(10000 + Math.random() * 90000).toString();
+  return `EVT-${year}-${random}`;
 }
-

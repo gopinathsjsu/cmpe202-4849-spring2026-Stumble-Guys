@@ -17,7 +17,7 @@ const EventSchedule: React.FC<EventScheduleProps> = ({ schedule }) => {
   if (schedule.length === 0) return null;
 
   return (
-    <div className="space-y-0" role="list" aria-label="Event schedule">
+    <div className="space-y-0">
       <h3 className="mb-6 text-lg font-semibold text-gray-900">Event Schedule</h3>
 
       <div className="relative">

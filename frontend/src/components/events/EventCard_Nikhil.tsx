@@ -52,14 +52,13 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => {
   return (
     <Link
       to={`/events/${slug}`}
-      className="group flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg focus-within:ring-2 focus-within:ring-orange-500/20"
+      className="group flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
     >
       <div className="relative aspect-[16/9] overflow-hidden">
         {image_url ? (
           <img
             src={image_url}
             alt={title}
-            loading="lazy"
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
