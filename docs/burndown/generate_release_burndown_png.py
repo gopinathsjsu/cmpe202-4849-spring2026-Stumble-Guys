@@ -42,9 +42,7 @@ ax.set_ylim(0, total_scope + 10)
 for xi, yi in zip(x, actual):
     ax.annotate(str(int(yi)), (xi, yi), textcoords="offset points", xytext=(0, 8), ha="center", fontsize=8)
 
-fig.text(0.5, 0.02, "Source: docs/burndown/burndown-charts.md — carry-over 2 pts/sprint in S1–S4", ha="center", fontsize=8, color="#64748b")
 plt.tight_layout()
-plt.subplots_adjust(bottom=0.14)
 out = __file__.replace("generate_release_burndown_png.py", "release-burndown.png")
 plt.savefig(out, bbox_inches="tight")
 print("Wrote", out)

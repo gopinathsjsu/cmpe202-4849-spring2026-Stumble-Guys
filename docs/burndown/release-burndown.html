@@ -47,12 +47,6 @@
       text-align: left;
     }
     th { background: #f1f5f9; font-weight: 600; }
-    .note {
-      margin-top: 1rem;
-      font-size: 0.8rem;
-      color: #64748b;
-      max-width: 960px;
-    }
   </style>
 </head>
 <body>
@@ -88,10 +82,6 @@
       </tr>
     </tfoot>
   </table>
-  <p class="note">
-    Source: <code>docs/burndown/burndown-charts.md</code>. Open this file in a browser (double-click or “Open with Live Server”).
-    Carry-over (2 pts each in Sprints 1–4) is reflected in sprint velocity table in that doc.
-  </p>
 
   <script>
     const sprints = [
@@ -169,7 +159,7 @@
         responsive: true,
         interaction: { intersect: false, mode: 'index' },
         plugins: {
-          legend: { position: 'bottom' },
+          legend: { position: 'top' },
           title: {
             display: true,
             text: 'Remaining story points vs sprint milestones',
