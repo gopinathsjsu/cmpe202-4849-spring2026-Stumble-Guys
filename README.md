@@ -6,16 +6,18 @@ A full-stack event management platform inspired by Eventbrite, built with modern
 > **Course:** CMPE 202 — Software Systems Engineering
 > **Semester:** Spring 2026
 
+**Course workspace (Notion):** [Software Systems Engineering Project](https://www.notion.so/Software-Systems-Engineering-Project-3048bd88685180dcbec5eef94333cdb8)
+
 ---
 
 ## Team Members & Contributions
 
 | Name            | Module                        | Key Contributions                                                                                         |
 | --------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **Preetam**     | Auth, Infrastructure & DevOps | User authentication (JWT), role-based access control, admin user management, Docker setup, Terraform IaC, CI/CD pipeline, Nginx config |
-| **Nikhil**      | Events & Categories           | Event CRUD APIs, category management, event approval workflow, EventCard/Grid/Form components, admin events page |
-| **Sasi**        | Tickets & Notifications       | Ticket purchase flow, RSVP system, QR code generation, email/calendar services, notification system, ticket components |
-| **Pratham**     | Search, Maps & Shared UI      | Full-text search, geo-location queries, Leaflet map integration, filter/sort system, shared UI components (Modal, Spinner, Pagination), middleware stack |
+| **Preetam**     | Auth, Infrastructure & DevOps | User authentication (JWT), role-based access control, admin user management, Docker setup, Terraform IaC, CI/CD pipeline; AWS deployment (Elastic Beanstalk, RDS, S3, CloudFront), secrets via environment variables |
+| **Nikhil**      | Events & Categories           | Event CRUD APIs, category management, event approval workflow, EventCard/Grid/Form components (multi-step wizard, image upload UX, safer submit behavior), admin events page |
+| **Sasi**        | Tickets & Notifications       | Ticket purchase flow, RSVP system, QR codes, email/calendar services, notification system; ticket listing ordering fixes |
+| **Pratham**     | Search, Maps & Shared UI      | Full-text search, geo-location queries, Leaflet map integration, filter/sort system, shared UI components (Modal, Spinner, Pagination), middleware stack; event detail Google Maps embed robustness |
 
 ---
 
@@ -27,7 +29,8 @@ A full-stack event management platform inspired by Eventbrite, built with modern
 - **ORM:** Prisma with PostgreSQL 15
 - **Authentication:** JWT (access + refresh tokens) with bcrypt
 - **Validation:** Zod
-- **Email:** Nodemailer
+- **Email:** Nodemailer with [Resend](https://resend.com/) API (`RESEND_API_KEY` in production)
+- **File uploads:** Multer + `@aws-sdk/client-s3` (event images stored in S3)
 - **Testing:** Jest + Supertest
 
 ### Frontend
@@ -44,11 +47,11 @@ A full-stack event management platform inspired by Eventbrite, built with modern
 - **Testing:** Vitest + React Testing Library
 
 ### Infrastructure
-- **Containerization:** Docker & Docker Compose
-- **Cloud:** AWS (EC2, RDS, ALB, VPC, S3, ECR)
-- **IaC:** Terraform
-- **CI/CD:** GitHub Actions
-- **Reverse Proxy:** Nginx
+- **Containerization:** Docker & Docker Compose (local development)
+- **Cloud (production deployment):** AWS — Elastic Beanstalk (Node.js on EC2 + Application Load Balancer), Amazon RDS (PostgreSQL), Amazon S3 (static frontend + event image uploads), Amazon CloudFront (HTTPS CDN in front of S3 and API — avoids mixed-content blocking when the SPA is served over HTTPS)
+- **IaC:** Terraform definitions under `infrastructure/terraform/` (baseline VPC/RDS patterns)
+- **CI/CD:** GitHub Actions — [.github/workflows/ci-cd_Preetam.yml](./.github/workflows/ci-cd_Preetam.yml)
+- **Optional reverse proxy:** Nginx sample config under `infrastructure/nginx/` (not required when using Elastic Beanstalk’s managed proxy)
 
 ---
 
@@ -62,7 +65,7 @@ A full-stack event management platform inspired by Eventbrite, built with modern
 - Password strength indicator
 
 ### Event Management
-- Create, edit, and delete events with a multi-step form wizard
+- Create, edit, and delete events with a multi-step form wizard (cover image upload to S3 in cloud deployments)
 - Category-based browsing and filtering
 - Event approval workflow for admin moderation
 - Organizer dashboard for managing personal events
@@ -156,15 +159,15 @@ eventhub/
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/eventhub.git
-cd eventhub
+git clone https://github.com/gopinathsjsu/cmpe202-4849-spring2026-Stumble-Guys.git
+cd cmpe202-4849-spring2026-Stumble-Guys
 
 # Start all services (PostgreSQL, Backend, Frontend)
 docker-compose up --build
 
 # The app will be available at:
 #   Frontend: http://localhost:5173
-#   Backend API: http://localhost:3001
+#   Backend API: http://localhost:3001/api/v1
 #   PostgreSQL: localhost:5432
 ```
 
@@ -197,6 +200,7 @@ npm install
 
 # Copy environment variables
 cp .env.example .env
+# Set VITE_API_URL to your backend base URL (includes /api/v1), e.g. http://localhost:3001/api/v1
 
 # Start the development server
 npm run dev
@@ -217,32 +221,52 @@ cd frontend && npm test
 
 ## API Endpoints
 
-| Method | Endpoint                          | Description                   | Auth Required |
-| ------ | --------------------------------- | ----------------------------- | ------------- |
-| POST   | `/api/auth/register`              | Register a new user           | No            |
-| POST   | `/api/auth/login`                 | Login and receive tokens      | No            |
-| POST   | `/api/auth/refresh`               | Refresh access token          | No            |
-| GET    | `/api/auth/me`                    | Get current user profile      | Yes           |
-| PUT    | `/api/auth/me`                    | Update profile                | Yes           |
-| GET    | `/api/events`                     | List events (with filters)    | No            |
-| POST   | `/api/events`                     | Create a new event            | Yes           |
-| GET    | `/api/events/:slug`               | Get event by slug             | No            |
-| PUT    | `/api/events/:id`                 | Update an event               | Yes           |
-| DELETE | `/api/events/:id`                 | Delete an event               | Yes           |
-| GET    | `/api/events/:id/ticket-types`    | List ticket types for event   | No            |
-| POST   | `/api/events/:id/tickets/purchase`| Purchase tickets              | Yes           |
-| GET    | `/api/search`                     | Search events                 | No            |
-| GET    | `/api/events/nearby`              | Get nearby events             | No            |
-| GET    | `/api/events/trending`            | Get trending events           | No            |
-| GET    | `/api/categories`                 | List all categories           | No            |
-| GET    | `/api/admin/events/pending`       | List pending events (admin)   | Yes (Admin)   |
-| GET    | `/api/admin/dashboard`            | Dashboard statistics          | Yes (Admin)   |
+All REST routes are mounted under **`/api/v1`**.
+
+| Method | Endpoint                              | Description                   | Auth Required |
+| ------ | ------------------------------------- | ----------------------------- | ------------- |
+| POST   | `/api/v1/auth/register`               | Register a new user           | No            |
+| POST   | `/api/v1/auth/login`                  | Login and receive JWT tokens   | No            |
+| POST   | `/api/v1/auth/refresh`                | Refresh access token          | No            |
+| GET    | `/api/v1/auth/me`                     | Get current user profile      | Yes           |
+| PUT    | `/api/v1/auth/me`                     | Update profile                | Yes           |
+| GET    | `/api/v1/events`                      | List events (with filters)    | No            |
+| POST   | `/api/v1/events`                      | Create a new event            | Yes           |
+| GET    | `/api/v1/events/:slug`                | Get event by slug             | No            |
+| PUT    | `/api/v1/events/:id`                  | Update an event               | Yes           |
+| DELETE | `/api/v1/events/:id`                  | Delete an event               | Yes           |
+| GET    | `/api/v1/events/:id/ticket-types`     | List ticket types for event   | No            |
+| POST   | `/api/v1/events/:id/tickets/purchase`| Purchase tickets              | Yes           |
+| POST   | `/api/v1/uploads/event-image`        | Upload event cover image      | Yes           |
+| GET    | `/api/v1/search`                      | Search events                 | No            |
+| GET    | `/api/v1/events/nearby`               | Get nearby events             | No            |
+| GET    | `/api/v1/events/trending`             | Get trending events           | No            |
+| GET    | `/api/v1/categories`                  | List all categories           | No            |
+| GET    | `/api/v1/admin/events/pending`        | List pending events (admin)   | Yes (Admin)   |
+| GET    | `/api/v1/admin/dashboard`             | Dashboard statistics          | Yes (Admin)   |
 
 ---
 
 ## Deployment
 
-The project uses Terraform for AWS infrastructure provisioning:
+### AWS runtime (Spring 2026)
+
+The team deployed EventHub end-to-end on AWS for demos and inspection:
+
+| Layer | AWS services |
+| ----- | ------------- |
+| **SPA** | Static files on **Amazon S3**, delivered over **HTTPS** with **Amazon CloudFront** |
+| **REST API** | **AWS Elastic Beanstalk** (Node.js on **EC2** behind an **Application Load Balancer**). A **second CloudFront distribution** can terminate HTTPS for the API so the SPA (HTTPS) does not trigger mixed-content blocking against an HTTP origin |
+| **Database** | **Amazon RDS for PostgreSQL** (private VPC connectivity from the EB environment) |
+| **Media** | Dedicated **S3 bucket** for organizer-uploaded event images; backend uses **`@aws-sdk/client-s3`** + env-configured credentials |
+
+**Secrets** (`DATABASE_URL`, `JWT_*`, `RESEND_API_KEY`, `CORS_ORIGIN`, `FRONTEND_URL`, `AWS_*`, bucket names, etc.) are configured as **Elastic Beanstalk environment variables** — never committed to the repo.
+
+**Operational docs & demo URLs:** kept in the course **[Notion — Software Systems Engineering Project](https://www.notion.so/Software-Systems-Engineering-Project-3048bd88685180dcbec5eef94333cdb8)**.
+
+### Terraform (optional IaC baseline)
+
+The repository includes Terraform modules under `infrastructure/terraform/` for VPC/RDS-style provisioning:
 
 ```bash
 cd infrastructure/terraform
@@ -257,7 +281,7 @@ terraform plan -var="db_username=admin" -var="db_password=YourSecurePassword"
 terraform apply
 ```
 
-See [infrastructure/terraform/](./infrastructure/terraform/) for complete IaC definitions and the [CI/CD pipeline](./.github/workflows/ci-cd_Preetam.yml) for automated deployment.
+See [infrastructure/terraform/](./infrastructure/terraform/) and the [CI/CD workflow](./.github/workflows/ci-cd_Preetam.yml) for automation details.
 
 ---
 
@@ -275,7 +299,8 @@ See [docs/xp-values.md](./docs/xp-values.md) for the full narrative.
 
 ## Project Links
 
-- **GitHub Repository:** [github.com/your-org/eventhub](https://github.com/your-org/eventhub)
-- **Sprint Burndown Charts:** [docs/burndown/burndown-charts.md](./docs/burndown/burndown-charts.md)
-- **Project Journal:** [docs/project-journal/](./docs/project-journal/)
-- **CI/CD Pipeline:** [.github/workflows/ci-cd_Preetam.yml](./.github/workflows/ci-cd_Preetam.yml)
+- **Course Notion workspace:** [Software Systems Engineering Project](https://www.notion.so/Software-Systems-Engineering-Project-3048bd88685180dcbec5eef94333cdb8)
+- **GitHub repository:** [gopinathsjsu/cmpe202-4849-spring2026-Stumble-Guys](https://github.com/gopinathsjsu/cmpe202-4849-spring2026-Stumble-Guys)
+- **Release burndown chart:** [docs/burndown/burndown-charts.md](./docs/burndown/burndown-charts.md) (embedded PNG + interactive HTML)
+- **Project journal:** [docs/project-journal/](./docs/project-journal/)
+- **CI/CD pipeline:** [.github/workflows/ci-cd_Preetam.yml](./.github/workflows/ci-cd_Preetam.yml)
