@@ -161,6 +161,7 @@ eventhub/
 ├── docs/                    # Project documentation
 │   ├── xp-values.md         # XP Core Values narrative
 │   ├── burndown/            # Burndown charts
+│   ├── wireframes/          # UI wireframes (HTML + PNG exports)
 │   └── project-journal/     # Sprint reports (1–6)
 ├── .github/workflows/       # CI/CD pipeline
 ├── docker-compose.yml       # Local development orchestration
@@ -323,5 +324,6 @@ See [docs/xp-values.md](./docs/xp-values.md) for the full narrative.
 - **Notion — Scrum backlogs, sprint task boards & course workspace:** [Software Systems Engineering Project](https://www.notion.so/Software-Systems-Engineering-Project-3048bd88685180dcbec5eef94333cdb8) — backlog **and task board** maintained **per sprint** (see [_Scrum backlog and task board (Notion)_](#scrum-backlog-and-task-board-notion))
 - **GitHub repository:** [gopinathsjsu/cmpe202-4849-spring2026-Stumble-Guys](https://github.com/gopinathsjsu/cmpe202-4849-spring2026-Stumble-Guys)
 - **Release burndown chart:** [docs/burndown/burndown-charts.md](./docs/burndown/burndown-charts.md) (embedded PNG + interactive HTML)
+- **Interactive wireframes (HTML):** [docs/wireframes/wireframes.html](./docs/wireframes/wireframes.html)
 - **Project journal:** [docs/project-journal/](./docs/project-journal/)
 - **CI/CD pipeline:** [.github/workflows/ci-cd_Preetam.yml](./.github/workflows/ci-cd_Preetam.yml)
