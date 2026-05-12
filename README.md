@@ -323,5 +323,6 @@ See [docs/xp-values.md](./docs/xp-values.md) for the full narrative.
 - **GitHub repository:** [gopinathsjsu/cmpe202-4849-spring2026-Stumble-Guys](https://github.com/gopinathsjsu/cmpe202-4849-spring2026-Stumble-Guys)
 - **Release burndown chart:** [docs/burndown/burndown-charts.md](./docs/burndown/burndown-charts.md) (embedded PNG + interactive HTML)
 - **Interactive wireframes (HTML):** [docs/wireframes/wireframes.html](./docs/wireframes/wireframes.html)
+- **Wireframes PDF:** [docs/wireframes/EventHub-wireframes.pdf](./docs/wireframes/EventHub-wireframes.pdf) — optional regeneration from HTML: [`docs/wireframes/generate-wireframes-pdf.sh`](./docs/wireframes/generate-wireframes-pdf.sh) (Chrome headless)
 - **Project journal:** [docs/project-journal/](./docs/project-journal/)
 - **CI/CD pipeline:** [.github/workflows/ci-cd_Preetam.yml](./.github/workflows/ci-cd_Preetam.yml)
