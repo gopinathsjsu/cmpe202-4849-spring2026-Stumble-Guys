@@ -161,7 +161,7 @@ eventhub/
 ├── docs/                    # Project documentation
 │   ├── xp-values.md         # XP Core Values narrative
 │   ├── burndown/            # Burndown charts
-│   ├── wireframes/          # UI wireframes (HTML + PNG exports)
+│   ├── wireframes/          # UI wireframes (HTML)
 │   └── project-journal/     # Sprint reports (1–6)
 ├── .github/workflows/       # CI/CD pipeline
 ├── docker-compose.yml       # Local development orchestration
