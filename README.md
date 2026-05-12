@@ -6,7 +6,7 @@ A full-stack event management platform inspired by Eventbrite, built with modern
 > **Course:** CMPE 202 — Software Systems Engineering
 > **Semester:** Spring 2026
 
-**Course workspace (Notion):** [Software Systems Engineering Project](https://www.notion.so/Software-Systems-Engineering-Project-3048bd88685180dcbec5eef94333cdb8)
+**Course docs & per-sprint Scrum backlogs:** [**Scrum backlog (Notion)**](#scrum-backlog-notion).
 
 ---
 
@@ -18,6 +18,20 @@ A full-stack event management platform inspired by Eventbrite, built with modern
 | **Nikhil**      | Events & Categories           | Event CRUD APIs, category management, event approval workflow, EventCard/Grid/Form components (multi-step wizard, image upload UX, safer submit behavior), admin events page |
 | **Sasi**        | Tickets & Notifications       | Ticket purchase flow, RSVP system, QR codes, email/calendar services, notification system; ticket listing ordering fixes |
 | **Pratham**     | Search, Maps & Shared UI      | Full-text search, geo-location queries, Leaflet map integration, filter/sort system, shared UI components (Modal, Spinner, Pagination), middleware stack; event detail Google Maps embed robustness |
+
+---
+
+## Scrum backlog (Notion)
+
+The team follows **Scrum** and keeps a **Product Backlog** plus a **Sprint Backlog for each sprint** (Sprints **1–6**, Feb 9 – May 4). For every sprint we maintain backlog items in Notion, including:
+
+- Refined **user stories**, acceptance criteria, and dependencies  
+- **Sprint goal**, planned capacity, and **carry-over** from the previous sprint  
+- **Definition of Done** checks and planning/refinement notes  
+
+**Workspace:** [Software Systems Engineering Project — Notion](https://www.notion.so/Software-Systems-Engineering-Project-3048bd88685180dcbec5eef94333cdb8)
+
+Quantitative sprint outcomes (velocity, carry-over, release burndown chart) are summarized in-repo: **[docs/burndown/burndown-charts.md](./docs/burndown/burndown-charts.md)**.
 
 ---
 
@@ -262,7 +276,7 @@ The team deployed EventHub end-to-end on AWS for demos and inspection:
 
 **Secrets** (`DATABASE_URL`, `JWT_*`, `RESEND_API_KEY`, `CORS_ORIGIN`, `FRONTEND_URL`, `AWS_*`, bucket names, etc.) are configured as **Elastic Beanstalk environment variables** — never committed to the repo.
 
-**Operational docs & demo URLs:** kept in the course **[Notion — Software Systems Engineering Project](https://www.notion.so/Software-Systems-Engineering-Project-3048bd88685180dcbec5eef94333cdb8)**.
+**Operational docs, demo URLs & Scrum backlog boards:** [Software Systems Engineering Project — Notion](https://www.notion.so/Software-Systems-Engineering-Project-3048bd88685180dcbec5eef94333cdb8) — see also [_Scrum backlog (Notion)_](#scrum-backlog-notion).
 
 ### Terraform (optional IaC baseline)
 
@@ -299,7 +313,7 @@ See [docs/xp-values.md](./docs/xp-values.md) for the full narrative.
 
 ## Project Links
 
-- **Course Notion workspace:** [Software Systems Engineering Project](https://www.notion.so/Software-Systems-Engineering-Project-3048bd88685180dcbec5eef94333cdb8)
+- **Notion — Scrum backlogs & course workspace:** [Software Systems Engineering Project](https://www.notion.so/Software-Systems-Engineering-Project-3048bd88685180dcbec5eef94333cdb8) — backlog maintained **per sprint** (see [_Scrum backlog (Notion)_](#scrum-backlog-notion))
 - **GitHub repository:** [gopinathsjsu/cmpe202-4849-spring2026-Stumble-Guys](https://github.com/gopinathsjsu/cmpe202-4849-spring2026-Stumble-Guys)
 - **Release burndown chart:** [docs/burndown/burndown-charts.md](./docs/burndown/burndown-charts.md) (embedded PNG + interactive HTML)
 - **Project journal:** [docs/project-journal/](./docs/project-journal/)
