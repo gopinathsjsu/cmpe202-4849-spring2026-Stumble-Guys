@@ -72,7 +72,6 @@ Quantitative sprint outcomes (velocity, carry-over, release burndown chart) are 
 - **Cloud (production deployment):** AWS — Elastic Beanstalk (Node.js on EC2 + Application Load Balancer), Amazon RDS (PostgreSQL), Amazon S3 (static frontend + event image uploads), Amazon CloudFront (HTTPS CDN in front of S3 and API — avoids mixed-content blocking when the SPA is served over HTTPS)
 - **IaC:** Terraform definitions under `infrastructure/terraform/` (baseline VPC/RDS patterns)
 - **CI/CD:** GitHub Actions — [.github/workflows/ci-cd_Preetam.yml](./.github/workflows/ci-cd_Preetam.yml)
-- **Optional reverse proxy:** Nginx sample config under `infrastructure/nginx/` (not required when using Elastic Beanstalk’s managed proxy)
 
 ---
 
@@ -156,8 +155,7 @@ eventhub/
 │   │   └── utils/           # Formatting, constants
 │   └── tests/               # Vitest test suites
 ├── infrastructure/
-│   ├── terraform/           # AWS infrastructure-as-code
-│   └── nginx/               # Reverse proxy configuration
+│   └── terraform/           # AWS infrastructure-as-code
 ├── docs/                    # Project documentation
 │   ├── xp-values.md         # XP Core Values narrative
 │   ├── burndown/            # Burndown charts
