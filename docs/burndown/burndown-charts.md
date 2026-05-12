@@ -32,6 +32,16 @@ This document contains links to the burndown charts for each sprint, along with 
 
 **Average Velocity:** ~33 points/sprint
 
+### Release burndown (all sprints)
+
+![Release burndown chart — remaining points vs sprint milestones](./release-burndown.png)
+
+Open the interactive chart in your browser (optional):
+
+- [release-burndown.html](./release-burndown.html) — same data with hover tooltips
+
+To regenerate the PNG after editing numbers: `python3 docs/burndown/generate_release_burndown_png.py`
+
 ---
 
 ## How to Read the Burndown Charts

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EventHub — Release Burndown (Sprints 1–6)</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      margin: 0;
+      padding: 2rem;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin: 0 0 0.35rem;
+    }
+    .sub {
+      color: #64748b;
+      font-size: 0.9rem;
+      margin-bottom: 1.25rem;
+      max-width: 52rem;
+      line-height: 1.45;
+    }
+    .chart-wrap {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 1.25rem 1rem 1rem;
+      max-width: 960px;
+      box-shadow: 0 1px 3px rgb(15 23 42 / 6%);
+    }
+    canvas { max-height: 420px; }
+    table {
+      margin-top: 1.75rem;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      max-width: 960px;
+    }
+    th, td {
+      border: 1px solid #e2e8f0;
+      padding: 0.45rem 0.65rem;
+      text-align: left;
+    }
+    th { background: #f1f5f9; font-weight: 600; }
+    .note {
+      margin-top: 1rem;
+      font-size: 0.8rem;
+      color: #64748b;
+      max-width: 960px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Release burndown — EventHub</h1>
+  <p class="sub">
+    Cumulative remaining story points across six sprints (Feb 9 – May 4).
+    Total planned scope <strong>206</strong> pts; completed <strong>198</strong> pts (8 pts attributed to carry-over in Sprints 1–4 per team velocity notes).
+    The <em>ideal</em> line assumes linear completion through Sprint 6.
+  </p>
+  <div class="chart-wrap">
+    <canvas id="burndown" aria-label="Release burndown chart"></canvas>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Sprint</th>
+        <th>Dates</th>
+        <th>Total pts</th>
+        <th>Completed</th>
+        <th>Cumulative completed</th>
+        <th>Remaining (release)</th>
+      </tr>
+    </thead>
+    <tbody id="tbl"></tbody>
+    <tfoot>
+      <tr>
+        <th colspan="2">Total</th>
+        <th>206</th>
+        <th>198</th>
+        <th>198</th>
+        <th>8</th>
+      </tr>
+    </tfoot>
+  </table>
+  <p class="note">
+    Source: <code>docs/burndown/burndown-charts.md</code>. Open this file in a browser (double-click or “Open with Live Server”).
+    Carry-over (2 pts each in Sprints 1–4) is reflected in sprint velocity table in that doc.
+  </p>
+
+  <script>
+    const sprints = [
+      { name: 'Start', date: 'Feb 9', planned: 0, completed: 0 },
+      { name: 'Sprint 1', date: 'Feb 22', planned: 34, completed: 32 },
+      { name: 'Sprint 2', date: 'Mar 8', planned: 40, completed: 38 },
+      { name: 'Sprint 3', date: 'Mar 22', planned: 42, completed: 40 },
+      { name: 'Sprint 4', date: 'Apr 5', planned: 36, completed: 34 },
+      { name: 'Sprint 5', date: 'Apr 19', planned: 30, completed: 30 },
+      { name: 'Sprint 6', date: 'May 4', planned: 24, completed: 24 },
+    ];
+
+    const totalScope = sprints.reduce((s, x) => s + x.planned, 0);
+
+    let cum = 0;
+    const labels = [];
+    const actualRemaining = [];
+    const idealRemaining = [];
+
+    sprints.forEach((sp, i) => {
+      cum += sp.completed;
+      const remaining = totalScope - cum;
+      labels.push(i === 0 ? 'Feb 9 (start)' : `${sp.name} end (${sp.date})`);
+      actualRemaining.push(i === 0 ? totalScope : remaining);
+      const ideal = totalScope * (1 - i / (sprints.length - 1));
+      idealRemaining.push(Math.round(ideal * 100) / 100);
+    });
+
+    const tbody = document.getElementById('tbl');
+    let cumCompleted = 0;
+    sprints.forEach((sp, i) => {
+      cumCompleted += sp.completed;
+      const row = document.createElement('tr');
+      const rem = i === 0 ? totalScope : totalScope - cumCompleted;
+      row.innerHTML =
+        `<td>${i === 0 ? '—' : sp.name}</td>` +
+        `<td>${i === 0 ? 'Feb 9' : sp.date}</td>` +
+        `<td>${i === 0 ? '—' : sp.planned}</td>` +
+        `<td>${i === 0 ? '—' : sp.completed}</td>` +
+        `<td>${i === 0 ? '0' : cumCompleted}</td>` +
+        `<td>${rem}</td>`;
+      tbody.appendChild(row);
+    });
+
+    const ctx = document.getElementById('burndown');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Actual remaining (release)',
+            data: actualRemaining,
+            borderColor: '#ea580c',
+            backgroundColor: 'rgba(234, 88, 12, 0.08)',
+            fill: true,
+            tension: 0.25,
+            borderWidth: 2.5,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+          },
+          {
+            label: 'Ideal remaining (linear)',
+            data: idealRemaining,
+            borderColor: '#64748b',
+            borderDash: [8, 6],
+            fill: false,
+            tension: 0,
+            borderWidth: 2,
+            pointRadius: 4,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        interaction: { intersect: false, mode: 'index' },
+        plugins: {
+          legend: { position: 'bottom' },
+          title: {
+            display: true,
+            text: 'Remaining story points vs sprint milestones',
+            padding: { bottom: 8 },
+            font: { size: 14, weight: '600' },
+          },
+          tooltip: {
+            callbacks: {
+              footer(items) {
+                const idx = items[0].dataIndex;
+                if (idx === 0) return `Total release scope: ${totalScope} pts`;
+                return `After sprint cumulative completion`;
+              },
+            },
+          },
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: 'Remaining points' },
+            grid: { color: '#f1f5f9' },
+          },
+          x: {
+            title: { display: true, text: 'Sprint milestone' },
+            grid: { display: false },
+          },
+        },
+      },
+    });
+  </script>
+</body>
+</html>
