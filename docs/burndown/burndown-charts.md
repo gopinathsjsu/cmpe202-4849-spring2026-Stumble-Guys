@@ -1,21 +1,16 @@
 # Burndown Charts — EventHub
 
-This document contains links to the burndown charts for each sprint, along with velocity metrics.
+Release-level burndown and sprint velocity for Sprints 1–6 (Feb 9 – May 4).
 
 ---
 
-## Sprint Burndown Chart Links
+## Release burndown (all sprints)
 
-| Sprint   | Dates              | Burndown Chart Link                                          |
-| -------- | ------------------ | ------------------------------------------------------------ |
-| Sprint 1 | Feb 9 – Feb 22    | [Sprint 1 Burndown](https://docs.google.com/spreadsheets/d/SPRINT_1_SHEET_ID) |
-| Sprint 2 | Feb 23 – Mar 8    | [Sprint 2 Burndown](https://docs.google.com/spreadsheets/d/SPRINT_2_SHEET_ID) |
-| Sprint 3 | Mar 9 – Mar 22    | [Sprint 3 Burndown](https://docs.google.com/spreadsheets/d/SPRINT_3_SHEET_ID) |
-| Sprint 4 | Mar 23 – Apr 5    | [Sprint 4 Burndown](https://docs.google.com/spreadsheets/d/SPRINT_4_SHEET_ID) |
-| Sprint 5 | Apr 6 – Apr 19    | [Sprint 5 Burndown](https://docs.google.com/spreadsheets/d/SPRINT_5_SHEET_ID) |
-| Sprint 6 | Apr 20 – May 4    | [Sprint 6 Burndown](https://docs.google.com/spreadsheets/d/SPRINT_6_SHEET_ID) |
+![Release burndown chart — remaining points vs sprint milestones](./release-burndown.png)
 
-> **Note:** Replace the `SPRINT_X_SHEET_ID` placeholders with actual Google Sheet IDs once the charts are created.
+Interactive version (same data): [release-burndown.html](./release-burndown.html)
+
+To regenerate the PNG after editing numbers: `python3 docs/burndown/generate_release_burndown_png.py`
 
 ---
 
@@ -30,34 +25,21 @@ This document contains links to the burndown charts for each sprint, along with 
 | Sprint 5 | 30             | 30               | 30       | 0          |
 | Sprint 6 | 24             | 24               | 24       | 0          |
 
-**Average Velocity:** ~33 points/sprint
-
-### Release burndown (all sprints)
-
-![Release burndown chart — remaining points vs sprint milestones](./release-burndown.png)
-
-Open the interactive chart in your browser (optional):
-
-- [release-burndown.html](./release-burndown.html) — same data with hover tooltips
-
-To regenerate the PNG after editing numbers: `python3 docs/burndown/generate_release_burndown_png.py`
+**Totals:** 206 planned · 198 completed · **Average velocity:** ~33 points/sprint
 
 ---
 
-## How to Read the Burndown Charts
+## How to Read the Release Chart
 
-Each burndown chart contains:
-
-1. **X-axis:** Days within the sprint (business days)
-2. **Y-axis:** Remaining story points
-3. **Ideal line:** Straight diagonal from total planned points to zero
-4. **Actual line:** Team's real progress, updated daily at stand-up
+1. **X-axis:** Sprint milestones from release start through end of Sprint 6.
+2. **Y-axis:** Remaining story points for the whole release (206 pts scope).
+3. **Ideal line:** Straight burn from full scope to zero if work closed perfectly evenly.
+4. **Actual line:** Cumulative completion after each sprint; ends at 8 pts remaining (carry-over in Sprints 1–4).
 
 **Healthy indicators:**
-- Actual line stays close to or below the ideal line
-- No long flat plateaus (indicates blockers)
-- Gradual descent rather than last-day cliff drops
+- Actual stays near or below the ideal line (ahead or on pace).
+- Smooth downward slope rather than long plateaus.
 
-**Action items from past charts:**
-- Sprint 3 showed a mid-sprint plateau → Led to scope re-prioritization in Sprint 4
-- Sprint 5 achieved a perfect burndown → Testing tasks were well-estimated
+**Team notes:**
+- Sprint 3 plateau → scope re-prioritization in Sprint 4.
+- Sprint 5 matched planned velocity → testing estimates landed well.
