@@ -72,7 +72,6 @@ Quantitative sprint outcomes (velocity, carry-over, release burndown chart) are 
 - **Cloud (production deployment):** AWS — Elastic Beanstalk (Node.js on EC2 + Application Load Balancer), Amazon RDS (PostgreSQL), Amazon S3 (static frontend + event image uploads), Amazon CloudFront (HTTPS CDN in front of S3 and API — avoids mixed-content blocking when the SPA is served over HTTPS)
 - **IaC:** Terraform definitions under `infrastructure/terraform/` (baseline VPC/RDS patterns)
 - **CI/CD:** GitHub Actions — [.github/workflows/ci-cd_Preetam.yml](./.github/workflows/ci-cd_Preetam.yml)
-- **Optional reverse proxy:** Nginx sample config under `infrastructure/nginx/` (not required when using Elastic Beanstalk’s managed proxy)
 
 ---
 
@@ -156,8 +155,7 @@ eventhub/
 │   │   └── utils/           # Formatting, constants
 │   └── tests/               # Vitest test suites
 ├── infrastructure/
-│   ├── terraform/           # AWS infrastructure-as-code
-│   └── nginx/               # Reverse proxy configuration
+│   └── terraform/           # AWS infrastructure-as-code
 ├── docs/                    # Project documentation
 │   ├── xp-values.md         # XP Core Values narrative
 │   ├── burndown/            # Burndown charts
@@ -325,5 +323,6 @@ See [docs/xp-values.md](./docs/xp-values.md) for the full narrative.
 - **GitHub repository:** [gopinathsjsu/cmpe202-4849-spring2026-Stumble-Guys](https://github.com/gopinathsjsu/cmpe202-4849-spring2026-Stumble-Guys)
 - **Release burndown chart:** [docs/burndown/burndown-charts.md](./docs/burndown/burndown-charts.md) (embedded PNG + interactive HTML)
 - **Interactive wireframes (HTML):** [docs/wireframes/wireframes.html](./docs/wireframes/wireframes.html)
+- **Wireframes PDF:** [docs/wireframes/EventHub-wireframes.pdf](./docs/wireframes/EventHub-wireframes.pdf) — optional regeneration from HTML: [`docs/wireframes/generate-wireframes-pdf.sh`](./docs/wireframes/generate-wireframes-pdf.sh) (Chrome headless)
 - **Project journal:** [docs/project-journal/](./docs/project-journal/)
 - **CI/CD pipeline:** [.github/workflows/ci-cd_Preetam.yml](./.github/workflows/ci-cd_Preetam.yml)
