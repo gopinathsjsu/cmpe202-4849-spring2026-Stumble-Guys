@@ -122,6 +122,14 @@ Quantitative sprint outcomes (velocity, carry-over, release burndown chart) are 
 
 ## Architecture
 
+<a id="component-and-deployment-diagrams"></a>
+
+### Component & deployment diagrams
+
+The **logical component diagram** and **AWS deployment diagram** live with the course submission package in **[Notion — Software Systems Engineering Project](https://www.notion.so/Software-Systems-Engineering-Project-3048bd88685180dcbec5eef94333cdb8)** (same workspace as the Scrum backlog and sprint task boards). Deliverable notes and ownership are summarized in **[docs/project-journal/sprint6-report.md](./docs/project-journal/sprint6-report.md)**.
+
+### Repository layout
+
 ```
 eventhub/
 ├── backend/                 # Express.js API server
@@ -319,6 +327,7 @@ See [docs/xp-values.md](./docs/xp-values.md) for the full narrative.
 
 ## Project Links
 
+- **Component & deployment diagrams:** [Architecture → Component & deployment diagrams](#component-and-deployment-diagrams) (primary copy on [Notion — Software Systems Engineering Project](https://www.notion.so/Software-Systems-Engineering-Project-3048bd88685180dcbec5eef94333cdb8); notes in [Sprint 6 report](./docs/project-journal/sprint6-report.md))
 - **Notion — Scrum backlogs, sprint task boards & course workspace:** [Software Systems Engineering Project](https://www.notion.so/Software-Systems-Engineering-Project-3048bd88685180dcbec5eef94333cdb8) — backlog **and task board** maintained **per sprint** (see [_Scrum backlog and task board (Notion)_](#scrum-backlog-and-task-board-notion))
 - **GitHub repository:** [gopinathsjsu/cmpe202-4849-spring2026-Stumble-Guys](https://github.com/gopinathsjsu/cmpe202-4849-spring2026-Stumble-Guys)
 - **Release burndown chart:** [docs/burndown/burndown-charts.md](./docs/burndown/burndown-charts.md) (embedded PNG + interactive HTML)
